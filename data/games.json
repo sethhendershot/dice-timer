@@ -1,0 +1,25 @@
+{
+  "currentGameId": null,
+  "games": [
+    {
+      "id": "e417205f-548f-4400-8afd-9cf745af277e",
+      "startedAt": "2026-06-28T22:45:45.165Z",
+      "endedAt": "2026-06-28T22:45:49.452Z"
+    },
+    {
+      "id": "efbe939e-e0ef-430d-a398-a0352a05cde7",
+      "startedAt": "2026-06-28T22:45:54.980Z",
+      "endedAt": null
+    },
+    {
+      "id": "d52819bd-5f4a-4435-a22c-a2570c0bb8ba",
+      "startedAt": "2026-06-28T22:49:30.109Z",
+      "endedAt": "2026-06-28T22:50:38.629Z"
+    },
+    {
+      "id": "5482420f-2d4f-42b7-98fb-e05bc8a6eedc",
+      "startedAt": "2026-06-28T22:50:45.101Z",
+      "endedAt": "2026-06-28T23:28:02.364Z"
+    }
+  ]
+}

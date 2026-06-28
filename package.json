@@ -1,0 +1,13 @@
+{
+  "name": "dice-timer",
+  "version": "1.0.0",
+  "description": "Settlers of Catan dice roll recorder with timer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

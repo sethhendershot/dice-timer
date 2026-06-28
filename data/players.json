@@ -1,0 +1,14 @@
+{
+  "players": [
+    {
+      "id": "b51afdcd-9f7b-43c8-835a-a2c9b2d74a63",
+      "name": "seth",
+      "createdAt": "2026-06-28T22:42:45.296Z"
+    },
+    {
+      "id": "93ef2fc0-95cf-45bb-a44d-84f058c935fb",
+      "name": "dfdf",
+      "createdAt": "2026-06-28T23:27:04.455Z"
+    }
+  ]
+}

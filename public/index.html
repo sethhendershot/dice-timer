@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catan Dice Timer</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <svg class="hex-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M12 2l8.66 5v10L12 22l-8.66-5V7L12 2zm0 2.31L6.34 8.5v7L12 19.69l5.66-4.19v-7L12 4.31z"/>
+      </svg>
+      <h1>Catan Dice Timer</h1>
+    </div>
+    <div class="gavel-badge">
+      <svg class="gavel-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M1 21h12v2H1v-2zM5.24 8.07l2.83-2.83 14.14 14.14-2.83 2.83L5.24 8.07zM12.32 1.59l2.83 2.83-2.83 2.83-2.83-2.83 2.83-2.83zM3.83 9.04L6.66 6.2l2.83 2.83-2.83 2.83-2.83-2.83z"/>
+      </svg>
+      <span class="gavel-text">The gavel of no bias</span>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn" id="openPlayers">Players</button>
+      <button type="button" class="btn" id="openPastGames">Past Games</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel timer-panel" id="timerPanel">
+      <div class="timer-expired-overlay" id="timerExpiredOverlay" aria-hidden="true">
+        <button type="button" class="timer-expired-close" id="closeTimerExpired" aria-label="Close">&times;</button>
+        <span class="timer-expired-text">UR DUN!</span>
+      </div>
+      <h2>Turn Timer</h2>
+      <div class="timer-display" id="timerDisplay">02:00</div>
+      <div class="timer-settings">
+        <label>
+          Minutes
+          <input type="number" id="timerMinutes" min="0" max="59" value="2">
+        </label>
+        <label>
+          Seconds
+          <input type="number" id="timerSeconds" min="0" max="59" value="0">
+        </label>
+      </div>
+      <div class="timer-controls">
+        <button type="button" class="btn btn-icon btn-primary" id="timerPlay" aria-label="Play" title="Play">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button type="button" class="btn btn-icon" id="timerPause" aria-label="Pause" title="Pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>
+        </button>
+        <button type="button" class="btn btn-icon btn-danger" id="timerReset" aria-label="Reset" title="Reset">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        </button>
+      </div>
+      <p class="timer-status" id="timerStatus">Ready</p>
+    </section>
+
+    <section class="panel roll-panel">
+      <h2>Record Roll</h2>
+      <form id="rollForm" class="roll-form">
+        <label>
+          Player
+          <select id="rollPlayer" required>
+            <option value="">Select player…</option>
+          </select>
+        </label>
+        <label>
+          Dice Total (2–12)
+          <input type="number" id="rollValue" min="2" max="12" required placeholder="7">
+        </label>
+        <button type="submit" class="btn btn-primary btn-wide">Record Roll</button>
+      </form>
+      <div class="quick-rolls" id="quickRolls"></div>
+    </section>
+
+    <section class="panel scoreboard-panel">
+      <h2>Roll Scoreboard</h2>
+      <div class="scoreboard" id="scoreboard"></div>
+    </section>
+
+    <section class="panel game-panel">
+      <h2>Game Session</h2>
+      <p class="game-info" id="gameInfo">No active game</p>
+      <div class="game-controls">
+        <button class="btn btn-primary" id="newGame">New Game</button>
+        <button class="btn" id="endGame" disabled>End Game</button>
+      </div>
+      <form id="winnerForm" class="winner-form">
+        <label>
+          Record Winner
+          <select id="winnerPlayer" required disabled>
+            <option value="">Select winner…</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn-accent btn-wide" disabled id="recordWinnerBtn">Record Winner</button>
+      </form>
+      <ul class="winner-history" id="winnerHistory"></ul>
+    </section>
+
+    <section class="panel chart-panel">
+      <h2>Roll Distribution</h2>
+      <div class="chart-filters">
+        <label>
+          <input type="radio" name="chartScope" value="game" checked>
+          Current game
+        </label>
+        <label>
+          <input type="radio" name="chartScope" value="all">
+          All time
+        </label>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="rollChart"></canvas>
+      </div>
+    </section>
+
+    <section class="panel player-breakdown-panel">
+      <h2>Player Roll Breakdown</h2>
+      <div id="playerBreakdown"></div>
+    </section>
+
+    <section class="panel game-rolls-panel">
+      <div class="panel-heading">
+        <h2>This Game&rsquo;s Rolls</h2>
+        <span class="roll-count" id="gameRollCount">0 rolls</span>
+      </div>
+      <div class="game-rolls-table-wrap">
+        <table class="game-rolls-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Roll</th>
+              <th>Player</th>
+              <th>Date</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="gameRollHistory">
+            <tr class="empty-row">
+              <td colspan="5">No rolls recorded for this game yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="modal" id="playersModal" hidden>
+    <div class="modal-backdrop" id="playersBackdrop"></div>
+    <div class="modal-dialog modal-dialog-sm" role="dialog" aria-labelledby="playersTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="playersTitle">Players</h2>
+        <button type="button" class="modal-close" id="closePlayers" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="playerForm" class="inline-form">
+          <input type="text" id="playerName" placeholder="New player name" required>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+        <ul class="player-list" id="playerList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="pastGamesModal" hidden>
+    <div class="modal-backdrop" id="pastGamesBackdrop"></div>
+    <div class="modal-dialog" role="dialog" aria-labelledby="pastGamesTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="pastGamesTitle">Past Games</h2>
+        <button type="button" class="modal-close" id="closePastGames" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body modal-split">
+        <div class="past-games-list-wrap">
+          <ul class="past-games-list" id="pastGamesList"></ul>
+        </div>
+        <div class="past-game-detail" id="pastGameDetail">
+          <p class="empty-state">Select a game to view its rolls and results</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
