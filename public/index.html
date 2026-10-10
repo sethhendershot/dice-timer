@@ -80,6 +80,10 @@
           </select>
         </label>
         <div class="quick-rolls" id="quickRolls"></div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="rollKnightPlayed">
+          Knight played
+        </label>
         <div class="roll-submit-row">
           <label class="roll-total-label">
             Total
@@ -191,6 +195,10 @@
             <select id="winnerPlayer" required disabled>
               <option value="">Select winner…</option>
             </select>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="winnerHadKnight" disabled>
+            Winner had played a knight
           </label>
           <button type="submit" class="btn btn-accent btn-wide" disabled id="recordWinnerBtn">Record Winner</button>
         </form>

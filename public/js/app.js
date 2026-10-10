@@ -391,7 +391,7 @@
       <tr>
         <td class="roll-num">${index + 1}</td>
         <td class="roll-value ${rollValueClass(r.value)}">${r.value}</td>
-        <td class="roll-player">${escapeHtml(r.playerName)}</td>
+        <td class="roll-player">${escapeHtml(r.playerName)}${r.knightPlayed === true ? ' <span class="knight-badge" title="Knight played" aria-label="Knight played">&#9822;</span>' : ''}</td>
         ${compact ? '' : `<td class="roll-date">${formatRollDate(r.timestamp)}</td>`}
         <td class="roll-time">${formatRollTime(r.timestamp)}</td>
         <td class="roll-actions">
@@ -468,7 +468,7 @@
         <span>Total rolls: <strong>${gameRolls.length}</strong></span>
       </div>
       ${winner
-        ? `<div class="past-game-winner"><span class="trophy">&#9733;</span> Winner: <strong>${escapeHtml(winner.playerName)}</strong></div>`
+        ? `<div class="past-game-winner"><span class="trophy">&#9733;</span> Winner: <strong>${escapeHtml(winner.playerName)}</strong>${winner.winnerHadKnight === true ? ' <span class="knight-badge" title="Winner had played a knight">&#9822; Knight</span>' : ''}</div>`
         : '<p class="empty-state">No winner recorded for this game</p>'}
       <div class="game-rolls-table-wrap">
         <table class="game-rolls-table">
@@ -561,7 +561,7 @@
     }
     list.innerHTML = recent.map((w) => `
       <li>
-        <span><span class="trophy">&#9733;</span>${escapeHtml(w.playerName)}</span>
+        <span><span class="trophy">&#9733;</span>${escapeHtml(w.playerName)}${w.winnerHadKnight === true ? ' <span class="knight-badge" title="Winner had played a knight" aria-label="Winner had played a knight">&#9822;</span>' : ''}</span>
         <span class="roll-time">${formatTimestamp(w.timestamp)}</span>
       </li>
     `).join('');
@@ -584,12 +584,14 @@
       deleteBtn.disabled = false;
       winnerSelect.disabled = false;
       winnerBtn.disabled = false;
+      $('winnerHadKnight').disabled = false;
     } else {
       info.textContent = 'No active game — start one to group rolls';
       endBtn.disabled = true;
       deleteBtn.disabled = true;
       winnerSelect.disabled = true;
       winnerBtn.disabled = true;
+      $('winnerHadKnight').disabled = true;
     }
   }
 
@@ -897,6 +899,7 @@
   }
 
   async function recordRoll(playerId, playerName, value) {
+    const knightPlayed = $('rollKnightPlayed').checked;
     const roll = await api('/api/rolls', {
       method: 'POST',
       body: JSON.stringify({
@@ -904,6 +907,7 @@
         playerName,
         value,
         gameId: currentGameId,
+        knightPlayed,
       }),
     });
     rolls.push(roll);
@@ -918,21 +922,25 @@
     }
     showToast(`${playerName} rolled ${value}`);
     $('rollValue').value = '';
+    $('rollKnightPlayed').checked = false;
     syncDiceSelection();
     selectNextPlayer(playerId);
     resetTimer();
   }
 
   async function recordWinner(playerId, playerName) {
+    const winnerHadKnight = $('winnerHadKnight').checked;
     const winner = await api('/api/winners', {
       method: 'POST',
       body: JSON.stringify({
         playerId,
         playerName,
         gameId: currentGameId,
+        winnerHadKnight,
       }),
     });
     winners.push(winner);
+    $('winnerHadKnight').checked = false;
     renderWinnerHistory();
     renderChartGameOptions();
     if (!$('pastGamesModal').hidden && selectedPastGameId === currentGameId) {

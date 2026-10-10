@@ -573,6 +573,32 @@ select {
   width: 100%;
 }
 
+label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+label.checkbox-label input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+label.checkbox-label:has(input:disabled) {
+  color: var(--muted);
+  cursor: default;
+}
+
+.knight-badge {
+  color: var(--accent);
+  font-weight: 600;
+  margin-left: 0.35rem;
+}
+
 input:focus,
 select:focus {
   outline: none;

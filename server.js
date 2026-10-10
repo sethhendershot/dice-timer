@@ -122,7 +122,7 @@ app.get('/api/rolls', (req, res) => {
 });
 
 app.post('/api/rolls', (req, res) => {
-  const { playerId, playerName, value, gameId } = req.body;
+  const { playerId, playerName, value, gameId, knightPlayed } = req.body;
   const rollValue = Number(value);
   if (!playerId || !playerName) {
     return res.status(400).json({ error: 'Player is required' });
@@ -137,6 +137,7 @@ app.post('/api/rolls', (req, res) => {
     playerName,
     value: rollValue,
     gameId: gameId || null,
+    knightPlayed: knightPlayed === true,
     timestamp: new Date().toISOString(),
   };
   data.rolls.push(roll);
@@ -162,7 +163,7 @@ app.get('/api/winners', (req, res) => {
 });
 
 app.post('/api/winners', (req, res) => {
-  const { playerId, playerName, gameId } = req.body;
+  const { playerId, playerName, gameId, winnerHadKnight } = req.body;
   if (!playerId || !playerName) {
     return res.status(400).json({ error: 'Player is required' });
   }
@@ -172,6 +173,7 @@ app.post('/api/winners', (req, res) => {
     playerId,
     playerName,
     gameId: gameId || null,
+    winnerHadKnight: winnerHadKnight === true,
     timestamp: new Date().toISOString(),
   };
   data.winners.push(winner);
