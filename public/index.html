@@ -21,7 +21,18 @@
       </svg>
       <span class="gavel-text">The gavel of no bias</span>
     </div>
+    <div class="header-status">
+      <div class="header-stat" id="gameClock" title="Time since this game started">
+        <span class="header-stat-label">Time</span>
+        <span class="header-stat-value" id="gameClockValue">—</span>
+      </div>
+      <div class="header-stat" id="pointGoalStat" title="Points this game is played to">
+        <span class="header-stat-label">To</span>
+        <span class="header-stat-value" id="pointGoalValue">21</span>
+      </div>
+    </div>
     <div class="header-actions">
+      <button type="button" class="btn" id="openGame">Game</button>
       <button type="button" class="btn" id="openPlayers">Players</button>
       <button type="button" class="btn" id="openPastGames">Past Games</button>
     </div>
@@ -68,13 +79,15 @@
             <option value="">Select player…</option>
           </select>
         </label>
-        <label>
-          Dice Total (2–12)
-          <input type="number" id="rollValue" min="2" max="12" required placeholder="7">
-        </label>
-        <button type="submit" class="btn btn-primary btn-wide">Record Roll</button>
+        <div class="quick-rolls" id="quickRolls"></div>
+        <div class="roll-submit-row">
+          <label class="roll-total-label">
+            Total
+            <input type="number" id="rollValue" min="2" max="12" required placeholder="7">
+          </label>
+          <button type="submit" class="btn btn-primary">Record Roll</button>
+        </div>
       </form>
-      <div class="quick-rolls" id="quickRolls"></div>
     </section>
 
     <section class="panel scoreboard-panel">
@@ -82,37 +95,25 @@
       <div class="scoreboard" id="scoreboard"></div>
     </section>
 
-    <section class="panel game-panel">
-      <h2>Game Session</h2>
-      <p class="game-info" id="gameInfo">No active game</p>
-      <div class="game-controls">
-        <button class="btn btn-primary" id="newGame">New Game</button>
-        <button class="btn" id="endGame" disabled>End Game</button>
-      </div>
-      <form id="winnerForm" class="winner-form">
-        <label>
-          Record Winner
-          <select id="winnerPlayer" required disabled>
-            <option value="">Select winner…</option>
-          </select>
-        </label>
-        <button type="submit" class="btn btn-accent btn-wide" disabled id="recordWinnerBtn">Record Winner</button>
-      </form>
-      <ul class="winner-history" id="winnerHistory"></ul>
-    </section>
-
     <section class="panel chart-panel">
       <h2>Roll Distribution</h2>
       <div class="chart-filters">
-        <label>
-          <input type="radio" name="chartScope" value="game" checked>
-          Current game
-        </label>
-        <label>
-          <input type="radio" name="chartScope" value="all">
-          All time
-        </label>
+        <select id="chartScope" class="chart-scope-select" aria-label="Which rolls to chart">
+          <option value="game">Current game</option>
+          <option value="all">All time</option>
+        </select>
+        <div class="chart-filter-group">
+          <label>
+            <input type="radio" name="chartType" value="bar" checked>
+            Bar
+          </label>
+          <label>
+            <input type="radio" name="chartType" value="line">
+            Line
+          </label>
+        </div>
       </div>
+      <p class="chart-scope-note" id="chartScopeNote"></p>
       <div class="chart-wrap">
         <canvas id="rollChart"></canvas>
       </div>
@@ -137,11 +138,12 @@
               <th>Player</th>
               <th>Date</th>
               <th>Time</th>
+              <th class="roll-actions"><span class="sr-only">Delete</span></th>
             </tr>
           </thead>
           <tbody id="gameRollHistory">
             <tr class="empty-row">
-              <td colspan="5">No rolls recorded for this game yet</td>
+              <td colspan="6">No rolls recorded for this game yet</td>
             </tr>
           </tbody>
         </table>
@@ -151,6 +153,52 @@
   </main>
 
   <div class="toast" id="toast" hidden></div>
+
+  <div class="modal" id="gameModal" hidden>
+    <div class="modal-backdrop" id="gameBackdrop"></div>
+    <div class="modal-dialog modal-dialog-sm" role="dialog" aria-labelledby="gameTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="gameTitle">Game</h2>
+        <button type="button" class="modal-close" id="closeGame" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="game-info" id="gameInfo">No active game</p>
+        <label class="point-goal-field">
+          Points to win
+          <input type="number" id="pointGoal" min="1" max="99" value="21">
+        </label>
+        <div class="game-controls">
+          <button type="button" class="btn btn-primary" id="newGame">New Game</button>
+          <button type="button" class="btn" id="endGame" disabled>End Game</button>
+        </div>
+        <button type="button" class="btn btn-danger btn-wide delete-game-btn" id="deleteCurrentGame" disabled>Delete this game</button>
+        <div class="turn-order">
+          <h3>Turn order</h3>
+          <p class="turn-order-hint">Recording a roll selects the next player in this list.</p>
+          <p class="empty-state" id="turnOrderEmpty">Add players in the order they take turns</p>
+          <ol class="turn-order-list" id="turnOrderList"></ol>
+          <div class="inline-form turn-order-add">
+            <select id="turnOrderPlayer" aria-label="Player to add to the turn order">
+              <option value="">Add player…</option>
+            </select>
+            <button type="button" class="btn btn-primary" id="addTurnPlayer">Add</button>
+          </div>
+        </div>
+        <form id="winnerForm" class="winner-form">
+          <h3>Record winner</h3>
+          <label>
+            Winner
+            <select id="winnerPlayer" required disabled>
+              <option value="">Select winner…</option>
+            </select>
+          </label>
+          <button type="submit" class="btn btn-accent btn-wide" disabled id="recordWinnerBtn">Record Winner</button>
+        </form>
+        <h3 class="recent-winners-heading">Recent winners</h3>
+        <ul class="winner-history" id="winnerHistory"></ul>
+      </div>
+    </div>
+  </div>
 
   <div class="modal" id="playersModal" hidden>
     <div class="modal-backdrop" id="playersBackdrop"></div>

@@ -3,12 +3,38 @@
 
   const CATAN_VALUES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const HOT_NUMBERS = new Set([6, 8]);
+  const DICE_WAYS = {
+    2: [[1, 1]],
+    3: [[1, 2]],
+    4: [[1, 3], [2, 2]],
+    5: [[1, 4], [2, 3]],
+    6: [[1, 5], [2, 4], [3, 3]],
+    7: [[1, 6], [2, 5], [3, 4]],
+    8: [[2, 6], [3, 5], [4, 4]],
+    9: [[3, 6], [4, 5]],
+    10: [[4, 6], [5, 5]],
+    11: [[5, 6]],
+    12: [[6, 6]],
+  };
+  const PIP_LAYOUTS = {
+    1: [[50, 50]],
+    2: [[28, 28], [72, 72]],
+    3: [[28, 28], [50, 50], [72, 72]],
+    4: [[28, 28], [72, 28], [28, 72], [72, 72]],
+    5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
+    6: [[28, 24], [72, 24], [28, 50], [72, 50], [28, 76], [72, 76]],
+  };
 
   let players = [];
   let rolls = [];
   let winners = [];
   let games = [];
+  const DEFAULT_POINT_GOAL = 21;
+
   let currentGameId = null;
+  let draftTurnOrder = [];
+  let draftPointGoal = DEFAULT_POINT_GOAL;
+  let gameClockInterval = null;
   let selectedPastGameId = null;
   let rollChart = null;
 
@@ -133,6 +159,7 @@
     players = data.players;
     renderPlayers();
     populatePlayerSelects();
+    renderTurnOrder();
   }
 
   async function loadRolls() {
@@ -141,6 +168,7 @@
     renderScoreboard();
     renderPlayerBreakdown();
     renderGameRollHistory();
+    renderChartGameOptions();
     updateChart();
   }
 
@@ -148,13 +176,23 @@
     const data = await api('/api/winners');
     winners = data.winners;
     renderWinnerHistory();
+    renderChartGameOptions();
   }
 
   async function loadGames() {
     const data = await api('/api/games');
     games = data.games;
     currentGameId = data.currentGameId;
+    if (!currentGameId) {
+      const latest = getSortedGames().find((game) => Array.isArray(game.playerOrder) && game.playerOrder.length);
+      draftTurnOrder = latest ? [...latest.playerOrder] : [];
+      const latestGoal = getSortedGames().find((game) => Number.isInteger(Number(game.pointGoal)));
+      draftPointGoal = latestGoal ? pointGoalOf(latestGoal) : DEFAULT_POINT_GOAL;
+    }
     renderGameInfo(data);
+    updateHeaderStatus();
+    renderTurnOrder();
+    renderChartGameOptions();
     renderScoreboard();
     renderPlayerBreakdown();
     renderGameRollHistory();
@@ -190,12 +228,37 @@
     $('winnerPlayer').innerHTML = `<option value="">Select winner…</option>${options}`;
   }
 
+  function chartScopeValue() {
+    return $('chartScope')?.value || 'game';
+  }
+
+  function getChartScope() {
+    const value = chartScopeValue();
+    if (value === 'all' || value === 'game') return value;
+    return 'past';
+  }
+
   function getScopedRolls() {
-    const scope = document.querySelector('input[name="chartScope"]:checked')?.value || 'game';
-    if (scope === 'game' && currentGameId) {
-      return rolls.filter((r) => r.gameId === currentGameId);
+    const scope = getChartScope();
+    if (scope === 'all') return rolls;
+    if (scope === 'past') {
+      return rolls.filter((r) => r.gameId === chartScopeValue());
     }
-    return rolls;
+    if (!currentGameId) return [];
+    return rolls.filter((r) => r.gameId === currentGameId);
+  }
+
+  function getEditingTurnOrder() {
+    if (currentGameId) {
+      const game = games.find((g) => g.id === currentGameId);
+      return [...(game?.playerOrder || [])];
+    }
+    return [...draftTurnOrder];
+  }
+
+  function getActiveTurnOrder() {
+    if (!currentGameId) return [];
+    return getEditingTurnOrder().filter((id) => players.some((player) => player.id === id));
   }
 
   function getRollsForGame(gameId) {
@@ -308,18 +371,19 @@
 
     if (!currentGameId) {
       countEl.textContent = 'No active game';
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Start a game to begin recording rolls</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Start a game to begin recording rolls</td></tr>';
       return;
     }
 
     countEl.textContent = `${gameRolls.length} roll${gameRolls.length === 1 ? '' : 's'}`;
 
     if (gameRolls.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No rolls recorded for this game yet</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No rolls recorded for this game yet</td></tr>';
       return;
     }
 
     tbody.innerHTML = renderRollRows(gameRolls);
+    bindRollDeleteButtons(tbody);
   }
 
   function renderRollRows(gameRolls, compact = false) {
@@ -330,8 +394,19 @@
         <td class="roll-player">${escapeHtml(r.playerName)}</td>
         ${compact ? '' : `<td class="roll-date">${formatRollDate(r.timestamp)}</td>`}
         <td class="roll-time">${formatRollTime(r.timestamp)}</td>
+        <td class="roll-actions">
+          <button type="button" class="delete-roll-btn" data-id="${r.id}" aria-label="Delete roll of ${r.value} by ${escapeAttr(r.playerName)}">&times;</button>
+        </td>
       </tr>
     `).join('');
+  }
+
+  function bindRollDeleteButtons(root) {
+    root.querySelectorAll('.delete-roll-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        deleteRoll(btn.dataset.id).catch((err) => showToast(err.message, 'error'));
+      });
+    });
   }
 
   function renderPastGamesList() {
@@ -381,10 +456,15 @@
       : 'In progress';
 
     detail.innerHTML = `
-      <h3>${formatRollDate(game.startedAt)}</h3>
+      <div class="past-game-heading">
+        <h3>${formatRollDate(game.startedAt)}</h3>
+        <button type="button" class="btn btn-danger" id="deletePastGame">Delete game</button>
+      </div>
       <div class="past-game-stats">
         <span>Started: <strong>${formatRollTime(game.startedAt)}</strong></span>
         <span>Ended: <strong>${endedText}</strong></span>
+        <span>Length: <strong id="pastGameDuration">${formatGameLength(game)}</strong></span>
+        <span>To: <strong id="pastGamePoints">${pointGoalOf(game)}</strong></span>
         <span>Total rolls: <strong>${gameRolls.length}</strong></span>
       </div>
       ${winner
@@ -399,16 +479,22 @@
               <th>Player</th>
               <th>Date</th>
               <th>Time</th>
+              <th class="roll-actions"><span class="sr-only">Delete</span></th>
             </tr>
           </thead>
           <tbody>
             ${gameRolls.length > 0
               ? renderRollRows(gameRolls)
-              : '<tr class="empty-row"><td colspan="5">No rolls recorded for this game</td></tr>'}
+              : '<tr class="empty-row"><td colspan="6">No rolls recorded for this game</td></tr>'}
           </tbody>
         </table>
       </div>
     `;
+
+    detail.querySelector('#deletePastGame').addEventListener('click', () => {
+      deleteGame(game.id).catch((err) => showToast(err.message, 'error'));
+    });
+    bindRollDeleteButtons(detail);
   }
 
   function selectPastGame(gameId) {
@@ -435,9 +521,7 @@
 
   function closePastGamesModal() {
     $('pastGamesModal').hidden = true;
-    if ($('playersModal').hidden) {
-      document.body.style.overflow = '';
-    }
+    releaseModalScroll();
   }
 
   function openPlayersModal() {
@@ -449,9 +533,23 @@
 
   function closePlayersModal() {
     $('playersModal').hidden = true;
-    if ($('pastGamesModal').hidden) {
-      document.body.style.overflow = '';
-    }
+    releaseModalScroll();
+  }
+
+  function openGameModal() {
+    renderTurnOrder();
+    $('gameModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeGameModal() {
+    $('gameModal').hidden = true;
+    releaseModalScroll();
+  }
+
+  function releaseModalScroll() {
+    const open = ['playersModal', 'pastGamesModal', 'gameModal'].some((id) => !$(id).hidden);
+    if (!open) document.body.style.overflow = '';
   }
 
   function renderWinnerHistory() {
@@ -472,21 +570,129 @@
   function renderGameInfo(gamesData) {
     const info = $('gameInfo');
     const endBtn = $('endGame');
+    const deleteBtn = $('deleteCurrentGame');
     const winnerSelect = $('winnerPlayer');
     const winnerBtn = $('recordWinnerBtn');
+
+    $('openGame').classList.toggle('game-active', Boolean(currentGameId));
 
     if (currentGameId) {
       const game = gamesData.games.find((g) => g.id === currentGameId);
       const started = game ? `${formatRollDate(game.startedAt)} at ${formatRollTime(game.startedAt)}` : 'unknown';
       info.textContent = `Active game — started ${started}`;
       endBtn.disabled = false;
+      deleteBtn.disabled = false;
       winnerSelect.disabled = false;
       winnerBtn.disabled = false;
     } else {
       info.textContent = 'No active game — start one to group rolls';
       endBtn.disabled = true;
+      deleteBtn.disabled = true;
       winnerSelect.disabled = true;
       winnerBtn.disabled = true;
+    }
+  }
+
+  function renderChartGameOptions() {
+    const select = $('chartScope');
+    if (!select) return;
+    const previous = select.value || 'game';
+    const pastGames = getSortedGames().filter((game) => game.id !== currentGameId);
+    const pastOptions = pastGames.map((game) => {
+      const count = getRollsForGame(game.id).length;
+      const winner = getWinnerForGame(game.id);
+      const winnerText = winner ? ` · ${winner.playerName}` : '';
+      const label = `${formatRollDate(game.startedAt)} · ${count} roll${count === 1 ? '' : 's'}${winnerText}`;
+      return `<option value="${game.id}">${escapeHtml(label)}</option>`;
+    }).join('');
+    const group = pastOptions ? `<optgroup label="Past games">${pastOptions}</optgroup>` : '';
+    select.innerHTML = `<option value="game">Current game</option><option value="all">All time</option>${group}`;
+    const valid = [...select.options].some((option) => option.value === previous);
+    select.value = valid ? previous : 'game';
+  }
+
+  function renderTurnOrder() {
+    const order = (currentGameId ? getActiveTurnOrder() : getEditingTurnOrder())
+      .filter((id) => players.some((player) => player.id === id));
+    const list = $('turnOrderList');
+    const empty = $('turnOrderEmpty');
+    empty.hidden = order.length > 0;
+
+    list.innerHTML = order.map((id, index) => {
+      const player = players.find((entry) => entry.id === id);
+      return `
+        <li>
+          <span class="turn-order-name">${escapeHtml(player.name)}</span>
+          <span class="turn-order-actions">
+            <button type="button" class="btn" data-move="up" data-id="${id}" ${index === 0 ? 'disabled' : ''}>Up</button>
+            <button type="button" class="btn" data-move="down" data-id="${id}" ${index === order.length - 1 ? 'disabled' : ''}>Down</button>
+            <button type="button" class="btn btn-danger" data-move="remove" data-id="${id}">Remove</button>
+          </span>
+        </li>
+      `;
+    }).join('');
+
+    list.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', () => onTurnOrderAction(btn.dataset.move, btn.dataset.id));
+    });
+
+    const remaining = players.filter((player) => !order.includes(player.id));
+    $('turnOrderPlayer').innerHTML = `<option value="">Add player…</option>${
+      remaining.map((player) => `<option value="${player.id}">${escapeHtml(player.name)}</option>`).join('')
+    }`;
+  }
+
+  async function setTurnOrder(nextOrder) {
+    const unique = [];
+    nextOrder.forEach((id) => {
+      if (typeof id === 'string' && id && !unique.includes(id) && players.some((player) => player.id === id)) {
+        unique.push(id);
+      }
+    });
+
+    if (currentGameId) {
+      const game = await api(`/api/games/${currentGameId}/order`, {
+        method: 'PATCH',
+        body: JSON.stringify({ playerOrder: unique }),
+      });
+      const index = games.findIndex((entry) => entry.id === game.id);
+      if (index === -1) games.push(game);
+      else games[index] = game;
+    } else {
+      draftTurnOrder = unique;
+    }
+    renderTurnOrder();
+  }
+
+  async function onTurnOrderAction(action, id) {
+    const order = (currentGameId ? getActiveTurnOrder() : getEditingTurnOrder())
+      .filter((playerId) => players.some((player) => player.id === playerId));
+    const index = order.indexOf(id);
+    if (index === -1) return;
+    if (action === 'remove') {
+      order.splice(index, 1);
+    } else if (action === 'up' && index > 0) {
+      [order[index - 1], order[index]] = [order[index], order[index - 1]];
+    } else if (action === 'down' && index < order.length - 1) {
+      [order[index + 1], order[index]] = [order[index], order[index + 1]];
+    } else {
+      return;
+    }
+    try {
+      await setTurnOrder(order);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function selectNextPlayer(recordedPlayerId) {
+    const order = getActiveTurnOrder();
+    if (order.length === 0) return;
+    const index = order.indexOf(recordedPlayerId);
+    const nextId = index === -1 ? order[0] : order[(index + 1) % order.length];
+    const select = $('rollPlayer');
+    if ([...select.options].some((option) => option.value === nextId)) {
+      select.value = nextId;
     }
   }
 
@@ -498,77 +704,173 @@
     return counts;
   }
 
-  function updateChart() {
-    const scoped = getScopedRolls();
-    const counts = buildRollCounts(scoped);
-    const labels = CATAN_VALUES.map(String);
-    const data = CATAN_VALUES.map((v) => counts[v]);
-    const bgColors = CATAN_VALUES.map((v) =>
+  function getChartType() {
+    return document.querySelector('input[name="chartType"]:checked')?.value || 'bar';
+  }
+
+  function rollBarColors() {
+    return CATAN_VALUES.map((v) =>
       v === 7 ? 'rgba(232, 93, 93, 0.75)' :
       HOT_NUMBERS.has(v) ? 'rgba(232, 168, 56, 0.75)' :
       'rgba(61, 139, 253, 0.65)'
     );
+  }
+
+  function solidRollColors(bgColors) {
+    return bgColors.map((c) => c.replace('0.75', '1').replace('0.65', '1'));
+  }
+
+  function buildChartDataset(data, type) {
+    const bgColors = rollBarColors();
+    const borderColors = solidRollColors(bgColors);
+    if (type === 'line') {
+      return {
+        label: 'Rolls',
+        data,
+        borderColor: 'rgba(61, 139, 253, 0.95)',
+        backgroundColor: 'rgba(61, 139, 253, 0.15)',
+        pointBackgroundColor: borderColors,
+        pointBorderColor: '#162030',
+        pointHoverBackgroundColor: borderColors,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBorderWidth: 2,
+        borderWidth: 2,
+        tension: 0.35,
+        fill: true,
+      };
+    }
+    return {
+      label: 'Rolls',
+      data,
+      backgroundColor: bgColors,
+      borderColor: borderColors,
+      borderWidth: 1,
+      borderRadius: 4,
+    };
+  }
+
+  function chartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `Rolled ${items[0].label}`,
+            label: (item) => `${item.raw} time${item.raw === 1 ? '' : 's'}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Dice Total', color: '#8b9cb3' },
+          ticks: { color: '#8b9cb3' },
+          grid: { color: 'rgba(45, 63, 86, 0.5)' },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, color: '#8b9cb3' },
+          grid: { color: 'rgba(45, 63, 86, 0.5)' },
+        },
+      },
+    };
+  }
+
+  function renderChartScopeNote(scopedRolls) {
+    const note = $('chartScopeNote');
+    const count = scopedRolls.length;
+    const noun = count === 1 ? 'roll' : 'rolls';
+    const scope = getChartScope();
+    if (scope === 'all') {
+      note.textContent = `${count} ${noun} across all games`;
+      return;
+    }
+    if (scope === 'past') {
+      const gameId = chartScopeValue();
+      const game = games.find((entry) => entry.id === gameId);
+      const when = game ? formatRollDate(game.startedAt) : 'that game';
+      note.textContent = `${count} ${noun} on ${when}`;
+      return;
+    }
+    if (!currentGameId) {
+      note.textContent = 'No active game. These totals stay at zero until a game is started.';
+      return;
+    }
+    note.textContent = `${count} ${noun} in the current game`;
+  }
+
+  function updateChart() {
+    const scoped = getScopedRolls();
+    renderChartScopeNote(scoped);
+    const counts = buildRollCounts(scoped);
+    const labels = CATAN_VALUES.map(String);
+    const data = CATAN_VALUES.map((v) => counts[v]);
+    const type = getChartType();
+
+    if (rollChart && rollChart.config.type !== type) {
+      rollChart.destroy();
+      rollChart = null;
+    }
 
     if (!rollChart) {
-      const ctx = $('rollChart').getContext('2d');
-      rollChart = new Chart(ctx, {
-        type: 'bar',
+      rollChart = new Chart($('rollChart').getContext('2d'), {
+        type,
         data: {
           labels,
-          datasets: [{
-            label: 'Rolls',
-            data,
-            backgroundColor: bgColors,
-            borderColor: bgColors.map((c) => c.replace('0.75', '1').replace('0.65', '1')),
-            borderWidth: 1,
-            borderRadius: 4,
-          }],
+          datasets: [buildChartDataset(data, type)],
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: (items) => `Rolled ${items[0].label}`,
-                label: (item) => `${item.raw} time${item.raw === 1 ? '' : 's'}`,
-              },
-            },
-          },
-          scales: {
-            x: {
-              title: { display: true, text: 'Dice Total', color: '#8b9cb3' },
-              ticks: { color: '#8b9cb3' },
-              grid: { color: 'rgba(45, 63, 86, 0.5)' },
-            },
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1, color: '#8b9cb3' },
-              grid: { color: 'rgba(45, 63, 86, 0.5)' },
-            },
-          },
-        },
+        options: chartOptions(),
       });
-    } else {
-      rollChart.data.datasets[0].data = data;
-      rollChart.data.datasets[0].backgroundColor = bgColors;
-      rollChart.data.datasets[0].borderColor = bgColors.map((c) => c.replace('0.75', '1').replace('0.65', '1'));
-      rollChart.update('none');
+      return;
     }
+
+    rollChart.data.datasets[0].data = data;
+    rollChart.update('none');
+  }
+
+  function diceSvg(face) {
+    const pips = PIP_LAYOUTS[face].map(([x, y]) =>
+      `<circle class="die-pip" cx="${x}" cy="${y}" r="8"/>`
+    ).join('');
+    return `<svg class="die" viewBox="0 0 100 100" aria-hidden="true"><rect class="die-face" x="6" y="6" width="88" height="88" rx="16"/>${pips}</svg>`;
+  }
+
+  function diceWaysLabel(ways) {
+    return ways.map(([a, b]) => `${a} and ${b}`).join(', or ');
+  }
+
+  function syncDiceSelection() {
+    const value = String($('rollValue').value || '');
+    document.querySelectorAll('.quick-roll-btn').forEach((btn) => {
+      const selected = btn.dataset.value === value;
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
   }
 
   function buildQuickRolls() {
     const container = $('quickRolls');
-    container.innerHTML = CATAN_VALUES.map((v) => `
-      <button type="button" class="btn quick-roll-btn${HOT_NUMBERS.has(v) ? ' hot' : ''}${v === 7 ? ' btn-danger' : ''}" data-value="${v}">${v}</button>
-    `).join('');
+    container.innerHTML = CATAN_VALUES.map((value) => {
+      const ways = DICE_WAYS[value];
+      const pairs = ways.map(([a, b]) => `<span class="dice-pair">${diceSvg(a)}${diceSvg(b)}</span>`).join('');
+      const tone = value === 7 ? ' seven' : HOT_NUMBERS.has(value) ? ' hot' : '';
+      return `
+        <button type="button" class="btn quick-roll-btn${tone}" data-value="${value}" aria-label="Set roll to ${value}: ${diceWaysLabel(ways)}">
+          <span class="dice-total">${value}</span>
+          <span class="dice-ways">${pairs}</span>
+        </button>
+      `;
+    }).join('');
 
     container.querySelectorAll('.quick-roll-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         $('rollValue').value = btn.dataset.value;
+        syncDiceSelection();
       });
     });
+    syncDiceSelection();
   }
 
   // --- Actions ---
@@ -581,6 +883,7 @@
     players.push(player);
     renderPlayers();
     populatePlayerSelects();
+    renderTurnOrder();
     showToast(`Added player: ${player.name}`);
   }
 
@@ -589,6 +892,7 @@
     players = players.filter((p) => p.id !== id);
     renderPlayers();
     populatePlayerSelects();
+    await setTurnOrder(getEditingTurnOrder().filter((playerId) => playerId !== id));
     showToast('Player removed');
   }
 
@@ -607,12 +911,15 @@
     renderScoreboard();
     renderPlayerBreakdown();
     renderGameRollHistory();
+    renderChartGameOptions();
     if (!$('pastGamesModal').hidden && selectedPastGameId === currentGameId) {
       renderPastGamesList();
       renderPastGameDetail(selectedPastGameId);
     }
     showToast(`${playerName} rolled ${value}`);
     $('rollValue').value = '';
+    syncDiceSelection();
+    selectNextPlayer(playerId);
     resetTimer();
   }
 
@@ -627,6 +934,7 @@
     });
     winners.push(winner);
     renderWinnerHistory();
+    renderChartGameOptions();
     if (!$('pastGamesModal').hidden && selectedPastGameId === currentGameId) {
       renderPastGamesList();
       renderPastGameDetail(selectedPastGameId);
@@ -635,16 +943,107 @@
   }
 
   async function startNewGame() {
-    const game = await api('/api/games', { method: 'POST' });
+    const playerOrder = getEditingTurnOrder().filter((id) => players.some((player) => player.id === id));
+    const typedGoal = Number($('pointGoal').value);
+    const pointGoal = Number.isInteger(typedGoal) && typedGoal >= 1 && typedGoal <= 99
+      ? typedGoal
+      : pointGoalOf(currentGame() || { pointGoal: draftPointGoal });
+    const game = await api('/api/games', {
+      method: 'POST',
+      body: JSON.stringify({ playerOrder, pointGoal }),
+    });
     currentGameId = game.id;
     games.push(game);
     const gamesData = await api('/api/games');
     renderGameInfo(gamesData);
+    renderTurnOrder();
+    renderChartGameOptions();
     updateChart();
     renderScoreboard();
     renderPlayerBreakdown();
     renderGameRollHistory();
+    if (playerOrder[0]) $('rollPlayer').value = playerOrder[0];
+    updateHeaderStatus();
     showToast('New game started');
+  }
+
+  async function savePointGoal(rawValue) {
+    const goal = Number(rawValue);
+    if (!Number.isInteger(goal) || goal < 1 || goal > 99) {
+      updateHeaderStatus();
+      throw new Error('Points to win must be a whole number from 1 to 99');
+    }
+    if (currentGameId) {
+      const game = await api(`/api/games/${currentGameId}/goal`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pointGoal: goal }),
+      });
+      const index = games.findIndex((entry) => entry.id === game.id);
+      if (index === -1) games.push(game);
+      else games[index] = game;
+    } else {
+      draftPointGoal = goal;
+    }
+    updateHeaderStatus();
+  }
+
+  async function deleteRoll(id) {
+    const roll = rolls.find((entry) => entry.id === id);
+    if (!roll) return;
+    const confirmed = window.confirm(`Delete ${roll.playerName}'s roll of ${roll.value}?`);
+    if (!confirmed) return;
+    await api(`/api/rolls/${id}`, { method: 'DELETE' });
+    rolls = rolls.filter((entry) => entry.id !== id);
+    refreshAfterRollChange();
+    showToast('Roll deleted');
+  }
+
+  async function deleteGame(id) {
+    const game = games.find((entry) => entry.id === id);
+    if (!game) return;
+    const count = getRollsForGame(id).length;
+    const rollText = `${count} roll${count === 1 ? '' : 's'}`;
+    const confirmed = window.confirm(`Delete the ${formatRollDate(game.startedAt)} game and its ${rollText}? This also removes its winner.`);
+    if (!confirmed) return;
+    await api(`/api/games/${id}`, { method: 'DELETE' });
+    if (currentGameId === id) {
+      draftTurnOrder = [...(game.playerOrder || [])];
+      draftPointGoal = pointGoalOf(game);
+      currentGameId = null;
+    }
+    games = games.filter((entry) => entry.id !== id);
+    rolls = rolls.filter((entry) => entry.gameId !== id);
+    winners = winners.filter((entry) => entry.gameId !== id);
+    if (selectedPastGameId === id) {
+      selectedPastGameId = getSortedGames()[0]?.id || null;
+    }
+    const gamesData = await api('/api/games');
+    games = gamesData.games;
+    currentGameId = gamesData.currentGameId;
+    renderGameInfo(gamesData);
+    renderTurnOrder();
+    renderWinnerHistory();
+    renderChartGameOptions();
+    updateHeaderStatus();
+    refreshAfterRollChange();
+    if (!$('pastGamesModal').hidden) {
+      renderPastGamesList();
+      if (selectedPastGameId) renderPastGameDetail(selectedPastGameId);
+      else $('pastGameDetail').innerHTML = '<p class="empty-state">No games recorded yet</p>';
+    }
+    showToast('Game deleted');
+  }
+
+  function refreshAfterRollChange() {
+    updateChart();
+    renderScoreboard();
+    renderPlayerBreakdown();
+    renderGameRollHistory();
+    renderChartGameOptions();
+    if (!$('pastGamesModal').hidden) {
+      renderPastGamesList();
+      if (selectedPastGameId) renderPastGameDetail(selectedPastGameId);
+    }
   }
 
   async function endCurrentGame() {
@@ -653,14 +1052,83 @@
     const endedGame = await api(`/api/games/${endedId}/end`, { method: 'PATCH' });
     const gameIndex = games.findIndex((g) => g.id === endedId);
     if (gameIndex !== -1) games[gameIndex] = endedGame;
+    draftTurnOrder = [...(endedGame.playerOrder || [])];
+    draftPointGoal = pointGoalOf(endedGame);
     currentGameId = null;
     const gamesData = await api('/api/games');
     renderGameInfo(gamesData);
+    renderTurnOrder();
+    renderChartGameOptions();
     updateChart();
     renderScoreboard();
     renderPlayerBreakdown();
     renderGameRollHistory();
+    updateHeaderStatus();
     showToast('Game ended');
+  }
+
+  function pointGoalOf(game) {
+    const goal = Number(game && game.pointGoal);
+    if (Number.isInteger(goal) && goal >= 1 && goal <= 99) return goal;
+    return DEFAULT_POINT_GOAL;
+  }
+
+  function currentGame() {
+    if (!currentGameId) return null;
+    return games.find((game) => game.id === currentGameId) || null;
+  }
+
+  function formatElapsed(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+    if (hours > 0) return `${hours}:${mm}:${ss}`;
+    return `${minutes}:${ss}`;
+  }
+
+  function formatGameLength(game) {
+    if (!game || !game.startedAt) return '—';
+    const start = new Date(game.startedAt).getTime();
+    const end = game.endedAt ? new Date(game.endedAt).getTime() : Date.now();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return '—';
+    return formatElapsed(end - start);
+  }
+
+  function updateHeaderStatus() {
+    const game = currentGame();
+    const goal = game ? pointGoalOf(game) : draftPointGoal;
+    $('pointGoalValue').textContent = String(goal);
+    const goalInput = $('pointGoal');
+    if (goalInput && document.activeElement !== goalInput) goalInput.value = String(goal);
+
+    const clock = $('gameClock');
+    const clockValue = $('gameClockValue');
+    if (!game || game.endedAt) {
+      clockValue.textContent = '—';
+      clock.classList.remove('is-live');
+    } else {
+      clockValue.textContent = formatGameLength(game);
+      clock.classList.add('is-live');
+    }
+
+    const durationEl = $('pastGameDuration');
+    const pointsEl = $('pastGamePoints');
+    if (selectedPastGameId && (durationEl || pointsEl)) {
+      const selected = games.find((entry) => entry.id === selectedPastGameId);
+      if (selected) {
+        if (durationEl) durationEl.textContent = formatGameLength(selected);
+        if (pointsEl) pointsEl.textContent = String(pointGoalOf(selected));
+      }
+    }
+  }
+
+  function startGameClock() {
+    if (gameClockInterval) clearInterval(gameClockInterval);
+    updateHeaderStatus();
+    gameClockInterval = setInterval(updateHeaderStatus, 1000);
   }
 
   // --- Utilities ---
@@ -784,11 +1252,51 @@
       }
     });
 
-    document.querySelectorAll('input[name="chartScope"]').forEach((radio) => {
+    $('pointGoal').addEventListener('change', async () => {
+      try {
+        await savePointGoal($('pointGoal').value);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    $('deleteCurrentGame').addEventListener('click', async () => {
+      if (!currentGameId) return;
+      try {
+        await deleteGame(currentGameId);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    $('rollValue').addEventListener('input', syncDiceSelection);
+
+    document.querySelectorAll('input[name="chartType"]').forEach((radio) => {
       radio.addEventListener('change', () => {
         updateChart();
       });
     });
+
+    $('chartScope').addEventListener('change', () => {
+      updateChart();
+    });
+
+    $('addTurnPlayer').addEventListener('click', async () => {
+      const id = $('turnOrderPlayer').value;
+      if (!id) {
+        showToast('Choose a player to add', 'error');
+        return;
+      }
+      try {
+        await setTurnOrder([...getEditingTurnOrder(), id]);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    $('openGame').addEventListener('click', openGameModal);
+    $('closeGame').addEventListener('click', closeGameModal);
+    $('gameBackdrop').addEventListener('click', closeGameModal);
 
     $('openPlayers').addEventListener('click', openPlayersModal);
     $('closePlayers').addEventListener('click', closePlayersModal);
@@ -800,7 +1308,8 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (!$('playersModal').hidden) closePlayersModal();
+      if (!$('gameModal').hidden) closeGameModal();
+      else if (!$('playersModal').hidden) closePlayersModal();
       else if (!$('pastGamesModal').hidden) closePastGamesModal();
     });
   }
@@ -814,12 +1323,17 @@
 
     try {
       await Promise.all([loadPlayers(), loadRolls(), loadWinners(), loadGames()]);
+      renderTurnOrder();
+      renderChartGameOptions();
       renderScoreboard();
       renderPlayerBreakdown();
       renderGameRollHistory();
+      updateChart();
+      updateHeaderStatus();
     } catch (err) {
       showToast('Failed to load data: ' + err.message, 'error');
     }
+    startGameClock();
   }
 
   document.addEventListener('DOMContentLoaded', init);

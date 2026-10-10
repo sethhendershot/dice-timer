@@ -55,6 +55,28 @@ function newId() {
   return crypto.randomUUID();
 }
 
+function parsePointGoal(value) {
+  if (value === undefined || value === null || value === '') return 21;
+  const goal = Number(value);
+  if (!Number.isInteger(goal) || goal < 1 || goal > 99) return null;
+  return goal;
+}
+
+function cleanPlayerOrder(value) {
+  if (!Array.isArray(value)) return [];
+  const known = new Set(readJson(FILES.players).players.map((player) => player.id));
+  const seen = new Set();
+  const order = [];
+  value.forEach((id) => {
+    if (typeof id !== 'string') return;
+    const trimmed = id.trim();
+    if (!trimmed || seen.has(trimmed) || !known.has(trimmed)) return;
+    seen.add(trimmed);
+    order.push(trimmed);
+  });
+  return order;
+}
+
 // --- Players ---
 
 app.get('/api/players', (req, res) => {
@@ -122,6 +144,17 @@ app.post('/api/rolls', (req, res) => {
   res.status(201).json(roll);
 });
 
+app.delete('/api/rolls/:id', (req, res) => {
+  const data = readJson(FILES.rolls);
+  const index = data.rolls.findIndex((roll) => roll.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Roll not found' });
+  }
+  data.rolls.splice(index, 1);
+  writeJson(FILES.rolls, data);
+  res.json({ ok: true });
+});
+
 // --- Winners ---
 
 app.get('/api/winners', (req, res) => {
@@ -153,16 +186,48 @@ app.get('/api/games', (req, res) => {
 });
 
 app.post('/api/games', (req, res) => {
+  const pointGoal = parsePointGoal(req.body && req.body.pointGoal);
+  if (pointGoal === null) {
+    return res.status(400).json({ error: 'Points to win must be a whole number from 1 to 99' });
+  }
   const data = readJson(FILES.games);
   const game = {
     id: newId(),
     startedAt: new Date().toISOString(),
     endedAt: null,
+    pointGoal,
+    playerOrder: cleanPlayerOrder(req.body && req.body.playerOrder),
   };
   data.games.push(game);
   data.currentGameId = game.id;
   writeJson(FILES.games, data);
   res.status(201).json(game);
+});
+
+app.patch('/api/games/:id/goal', (req, res) => {
+  const pointGoal = parsePointGoal(req.body && req.body.pointGoal);
+  if (pointGoal === null) {
+    return res.status(400).json({ error: 'Points to win must be a whole number from 1 to 99' });
+  }
+  const data = readJson(FILES.games);
+  const game = data.games.find((entry) => entry.id === req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  game.pointGoal = pointGoal;
+  writeJson(FILES.games, data);
+  res.json(game);
+});
+
+app.patch('/api/games/:id/order', (req, res) => {
+  const data = readJson(FILES.games);
+  const game = data.games.find((g) => g.id === req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  game.playerOrder = cleanPlayerOrder(req.body && req.body.playerOrder);
+  writeJson(FILES.games, data);
+  res.json(game);
 });
 
 app.patch('/api/games/:id/end', (req, res) => {
@@ -177,6 +242,29 @@ app.patch('/api/games/:id/end', (req, res) => {
   }
   writeJson(FILES.games, data);
   res.json(game);
+});
+
+app.delete('/api/games/:id', (req, res) => {
+  const gamesData = readJson(FILES.games);
+  const index = gamesData.games.findIndex((game) => game.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  gamesData.games.splice(index, 1);
+  if (gamesData.currentGameId === req.params.id) {
+    gamesData.currentGameId = null;
+  }
+  writeJson(FILES.games, gamesData);
+
+  const rollsData = readJson(FILES.rolls);
+  rollsData.rolls = rollsData.rolls.filter((roll) => roll.gameId !== req.params.id);
+  writeJson(FILES.rolls, rollsData);
+
+  const winnersData = readJson(FILES.winners);
+  winnersData.winners = winnersData.winners.filter((winner) => winner.gameId !== req.params.id);
+  writeJson(FILES.winners, winnersData);
+
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {

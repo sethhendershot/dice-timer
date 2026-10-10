@@ -2,13 +2,18 @@
   "players": [
     {
       "id": "b51afdcd-9f7b-43c8-835a-a2c9b2d74a63",
-      "name": "seth",
+      "name": "Seth",
       "createdAt": "2026-06-28T22:42:45.296Z"
     },
     {
-      "id": "93ef2fc0-95cf-45bb-a44d-84f058c935fb",
-      "name": "dfdf",
-      "createdAt": "2026-06-28T23:27:04.455Z"
+      "id": "d2c44590-a6f2-4e1b-912d-cc06e3b5d629",
+      "name": "Kenya",
+      "createdAt": "2026-07-04T04:25:44.975Z"
+    },
+    {
+      "id": "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4",
+      "name": "Adam",
+      "createdAt": "2026-07-04T04:25:49.055Z"
     }
   ]
 }
