@@ -593,6 +593,30 @@ label.checkbox-label:has(input:disabled) {
   cursor: default;
 }
 
+.roll-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
+.called-by-field[hidden] {
+  display: none;
+}
+
+.called-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--success);
+  background: rgba(76, 175, 130, 0.12);
+  border: 1px solid rgba(76, 175, 130, 0.35);
+  border-radius: 999px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .knight-badge {
   color: var(--accent);
   font-weight: 600;

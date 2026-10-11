@@ -227,6 +227,16 @@
 
     $('rollPlayer').innerHTML = `<option value="">Select player…</option>${options}`;
     $('winnerPlayer').innerHTML = `<option value="">Select winner…</option>${options}`;
+    const calledBy = $('rollCalledBy').value;
+    $('rollCalledBy').innerHTML = `<option value="">Select who called it…</option>${options}`;
+    if (players.some((p) => p.id === calledBy)) $('rollCalledBy').value = calledBy;
+  }
+
+  function syncCalledByField(checkboxId, fieldId, selectId) {
+    const checked = $(checkboxId).checked;
+    $(fieldId).hidden = !checked;
+    $(selectId).required = checked;
+    if (!checked) $(selectId).value = '';
   }
 
   function chartScopeValue() {
@@ -392,7 +402,7 @@
       <tr>
         <td class="roll-num">${index + 1}</td>
         <td class="roll-value ${rollValueClass(r.value)}">${r.value}</td>
-        <td class="roll-player">${escapeHtml(r.playerName)}${r.knightPlayed === true ? ' <span class="knight-badge" title="Knight played" aria-label="Knight played">&#9822;</span>' : ''}</td>
+        <td class="roll-player">${escapeHtml(r.playerName)}${r.knightPlayed === true ? ' <span class="knight-badge" title="Knight played" aria-label="Knight played">&#9822;</span>' : ''}${r.calledIt === true && r.calledByName ? ` <span class="called-badge" title="Called by ${escapeAttr(r.calledByName)}">&#127919; ${escapeHtml(r.calledByName)}</span>` : ''}</td>
         ${compact ? '' : `<td class="roll-date">${formatRollDate(r.timestamp)}</td>`}
         <td class="roll-time">${formatRollTime(r.timestamp)}</td>
         <td class="roll-actions">
@@ -570,6 +580,14 @@
     $('editRollPlayer').value = roll.playerId;
     $('editRollValue').value = roll.value;
     $('editRollKnight').checked = roll.knightPlayed === true;
+    const calledKnown = !roll.calledById || players.some((p) => p.id === roll.calledById);
+    const calledMissing = calledKnown
+      ? ''
+      : `<option value="${escapeAttr(roll.calledById)}" data-name="${escapeAttr(roll.calledByName || '')}">${escapeHtml(roll.calledByName || 'Unknown player')}</option>`;
+    $('editRollCalledBy').innerHTML = `<option value="">Select who called it…</option>${calledMissing}${options}`;
+    $('editRollCalledIt').checked = roll.calledIt === true;
+    syncCalledByField('editRollCalledIt', 'editRollCalledByField', 'editRollCalledBy');
+    if (roll.calledIt === true && roll.calledById) $('editRollCalledBy').value = roll.calledById;
     $('editRollMeta').textContent = `Recorded ${formatRollDate(roll.timestamp)} at ${formatRollTime(roll.timestamp)}`;
     $('editRollModal').hidden = false;
     document.body.style.overflow = 'hidden';
@@ -595,6 +613,12 @@
       showToast('Roll must be between 2 and 12', 'error');
       return;
     }
+    const calledIt = $('editRollCalledIt').checked;
+    const calledById = calledIt ? $('editRollCalledBy').value : null;
+    if (calledIt && !calledById) {
+      showToast('Choose who called it', 'error');
+      return;
+    }
     const updated = await api(`/api/rolls/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -602,6 +626,8 @@
         playerName: player.name,
         value,
         knightPlayed: $('editRollKnight').checked,
+        calledIt,
+        calledById,
       }),
     });
     const index = rolls.findIndex((entry) => entry.id === id);
@@ -964,6 +990,12 @@
 
   async function recordRoll(playerId, playerName, value) {
     const knightPlayed = $('rollKnightPlayed').checked;
+    const calledIt = $('rollCalledIt').checked;
+    const calledById = calledIt ? $('rollCalledBy').value : null;
+    if (calledIt && !calledById) {
+      showToast('Choose who called it', 'error');
+      return;
+    }
     const roll = await api('/api/rolls', {
       method: 'POST',
       body: JSON.stringify({
@@ -972,6 +1004,8 @@
         value,
         gameId: currentGameId,
         knightPlayed,
+        calledIt,
+        calledById,
       }),
     });
     rolls.push(roll);
@@ -987,6 +1021,8 @@
     showToast(`${playerName} rolled ${value}`);
     $('rollValue').value = '';
     $('rollKnightPlayed').checked = false;
+    $('rollCalledIt').checked = false;
+    syncCalledByField('rollCalledIt', 'rollCalledByField', 'rollCalledBy');
     syncDiceSelection();
     selectNextPlayer(playerId);
     resetTimer();
@@ -1342,6 +1378,12 @@
     });
 
     $('rollValue').addEventListener('input', syncDiceSelection);
+    $('rollCalledIt').addEventListener('change', () => {
+      syncCalledByField('rollCalledIt', 'rollCalledByField', 'rollCalledBy');
+    });
+    $('editRollCalledIt').addEventListener('change', () => {
+      syncCalledByField('editRollCalledIt', 'editRollCalledByField', 'editRollCalledBy');
+    });
 
     document.querySelectorAll('input[name="chartType"]').forEach((radio) => {
       radio.addEventListener('change', () => {

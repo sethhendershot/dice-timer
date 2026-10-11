@@ -77,6 +77,32 @@ function cleanPlayerOrder(value) {
   return order;
 }
 
+// Resolves the "called it" fields for a roll. Returns { error } or { calledIt, calledById, calledByName }.
+// existing is the roll being edited (if any) so a caller who has since been removed can be kept as-is.
+function resolveCalledIt(calledIt, calledById, existing) {
+  if (typeof calledIt !== 'boolean') {
+    return { error: 'Called it must be true or false' };
+  }
+  if (!calledIt) {
+    if (calledById !== undefined && calledById !== null && calledById !== '') {
+      return { error: 'Called by is only allowed when Called it is checked' };
+    }
+    return { calledIt: false, calledById: null, calledByName: null };
+  }
+  const id = typeof calledById === 'string' ? calledById.trim() : '';
+  if (!id) {
+    return { error: 'Choose who called it' };
+  }
+  const player = readJson(FILES.players).players.find((entry) => entry.id === id);
+  if (player) {
+    return { calledIt: true, calledById: player.id, calledByName: player.name };
+  }
+  if (existing && existing.calledById === id && existing.calledByName) {
+    return { calledIt: true, calledById: id, calledByName: existing.calledByName };
+  }
+  return { error: 'Called by must be a known player' };
+}
+
 // --- Players ---
 
 app.get('/api/players', (req, res) => {
@@ -122,13 +148,17 @@ app.get('/api/rolls', (req, res) => {
 });
 
 app.post('/api/rolls', (req, res) => {
-  const { playerId, playerName, value, gameId, knightPlayed } = req.body;
+  const { playerId, playerName, value, gameId, knightPlayed, calledIt, calledById } = req.body;
   const rollValue = Number(value);
   if (!playerId || !playerName) {
     return res.status(400).json({ error: 'Player is required' });
   }
   if (!Number.isInteger(rollValue) || rollValue < 2 || rollValue > 12) {
     return res.status(400).json({ error: 'Roll must be an integer between 2 and 12' });
+  }
+  const called = resolveCalledIt(calledIt === undefined ? false : calledIt, calledById);
+  if (called.error) {
+    return res.status(400).json({ error: called.error });
   }
   const data = readJson(FILES.rolls);
   const roll = {
@@ -138,6 +168,9 @@ app.post('/api/rolls', (req, res) => {
     value: rollValue,
     gameId: gameId || null,
     knightPlayed: knightPlayed === true,
+    calledIt: called.calledIt,
+    calledById: called.calledById,
+    calledByName: called.calledByName,
     timestamp: new Date().toISOString(),
   };
   data.rolls.push(roll);
@@ -174,15 +207,28 @@ app.patch('/api/rolls/:id', (req, res) => {
     updates.knightPlayed = body.knightPlayed;
   }
 
-  if (Object.keys(updates).length === 0) {
-    return res.status(400).json({ error: 'Nothing to update' });
-  }
-
   const data = readJson(FILES.rolls);
   const roll = data.rolls.find((entry) => entry.id === req.params.id);
   if (!roll) {
     return res.status(404).json({ error: 'Roll not found' });
   }
+
+  if (body.calledIt !== undefined || body.calledById !== undefined) {
+    const calledIt = body.calledIt !== undefined ? body.calledIt : roll.calledIt === true;
+    const calledById = body.calledById !== undefined
+      ? body.calledById
+      : (calledIt === true ? roll.calledById : undefined);
+    const called = resolveCalledIt(calledIt, calledById, roll);
+    if (called.error) {
+      return res.status(400).json({ error: called.error });
+    }
+    Object.assign(updates, called);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+
   Object.assign(roll, updates, { editedAt: new Date().toISOString() });
   writeJson(FILES.rolls, data);
   res.json(roll);
