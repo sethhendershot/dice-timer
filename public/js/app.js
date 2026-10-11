@@ -36,6 +36,7 @@
   let draftPointGoal = DEFAULT_POINT_GOAL;
   let gameClockInterval = null;
   let selectedPastGameId = null;
+  let editingRollId = null;
   let rollChart = null;
 
   // --- Timer state ---
@@ -395,6 +396,7 @@
         ${compact ? '' : `<td class="roll-date">${formatRollDate(r.timestamp)}</td>`}
         <td class="roll-time">${formatRollTime(r.timestamp)}</td>
         <td class="roll-actions">
+          <button type="button" class="edit-roll-btn" data-id="${r.id}" title="Edit roll" aria-label="Edit roll of ${r.value} by ${escapeAttr(r.playerName)}">&#9998;</button>
           <button type="button" class="delete-roll-btn" data-id="${r.id}" aria-label="Delete roll of ${r.value} by ${escapeAttr(r.playerName)}">&times;</button>
         </td>
       </tr>
@@ -406,6 +408,9 @@
       btn.addEventListener('click', () => {
         deleteRoll(btn.dataset.id).catch((err) => showToast(err.message, 'error'));
       });
+    });
+    root.querySelectorAll('.edit-roll-btn').forEach((btn) => {
+      btn.addEventListener('click', () => openEditRollModal(btn.dataset.id));
     });
   }
 
@@ -547,8 +552,67 @@
     releaseModalScroll();
   }
 
+  function openEditRollModal(id) {
+    const roll = rolls.find((entry) => entry.id === id);
+    if (!roll) {
+      showToast('Roll not found', 'error');
+      return;
+    }
+    editingRollId = id;
+    const known = players.some((p) => p.id === roll.playerId);
+    const options = players.map((p) =>
+      `<option value="${p.id}" data-name="${escapeAttr(p.name)}">${escapeHtml(p.name)}</option>`
+    ).join('');
+    const missing = known
+      ? ''
+      : `<option value="${escapeAttr(roll.playerId)}" data-name="${escapeAttr(roll.playerName)}">${escapeHtml(roll.playerName)}</option>`;
+    $('editRollPlayer').innerHTML = missing + options;
+    $('editRollPlayer').value = roll.playerId;
+    $('editRollValue').value = roll.value;
+    $('editRollKnight').checked = roll.knightPlayed === true;
+    $('editRollMeta').textContent = `Recorded ${formatRollDate(roll.timestamp)} at ${formatRollTime(roll.timestamp)}`;
+    $('editRollModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('editRollValue').focus();
+  }
+
+  function closeEditRollModal() {
+    editingRollId = null;
+    $('editRollModal').hidden = true;
+    releaseModalScroll();
+  }
+
+  async function saveEditedRoll() {
+    const id = editingRollId;
+    if (!id) return;
+    const player = getSelectedPlayer($('editRollPlayer'));
+    const value = parseInt($('editRollValue').value, 10);
+    if (!player) {
+      showToast('Select a player', 'error');
+      return;
+    }
+    if (!Number.isInteger(value) || value < 2 || value > 12) {
+      showToast('Roll must be between 2 and 12', 'error');
+      return;
+    }
+    const updated = await api(`/api/rolls/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        playerId: player.id,
+        playerName: player.name,
+        value,
+        knightPlayed: $('editRollKnight').checked,
+      }),
+    });
+    const index = rolls.findIndex((entry) => entry.id === id);
+    if (index !== -1) rolls[index] = updated;
+    closeEditRollModal();
+    refreshAfterRollChange();
+    showToast(`Roll updated: ${updated.playerName} rolled ${updated.value}`);
+  }
+
   function releaseModalScroll() {
-    const open = ['playersModal', 'pastGamesModal', 'gameModal'].some((id) => !$(id).hidden);
+    const open = ['playersModal', 'pastGamesModal', 'gameModal', 'editRollModal'].some((id) => !$(id).hidden);
     if (!open) document.body.style.overflow = '';
   }
 
@@ -1310,13 +1374,26 @@
     $('closePlayers').addEventListener('click', closePlayersModal);
     $('playersBackdrop').addEventListener('click', closePlayersModal);
 
+    $('editRollForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await saveEditedRoll();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+    $('cancelEditRoll').addEventListener('click', closeEditRollModal);
+    $('closeEditRoll').addEventListener('click', closeEditRollModal);
+    $('editRollBackdrop').addEventListener('click', closeEditRollModal);
+
     $('openPastGames').addEventListener('click', openPastGamesModal);
     $('closePastGames').addEventListener('click', closePastGamesModal);
     $('pastGamesBackdrop').addEventListener('click', closePastGamesModal);
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (!$('gameModal').hidden) closeGameModal();
+      if (!$('editRollModal').hidden) closeEditRollModal();
+      else if (!$('gameModal').hidden) closeGameModal();
       else if (!$('playersModal').hidden) closePlayersModal();
       else if (!$('pastGamesModal').hidden) closePastGamesModal();
     });

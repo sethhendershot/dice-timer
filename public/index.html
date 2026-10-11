@@ -243,6 +243,37 @@
     </div>
   </div>
 
+  <div class="modal modal-stacked" id="editRollModal" hidden>
+    <div class="modal-backdrop" id="editRollBackdrop"></div>
+    <div class="modal-dialog modal-dialog-sm" role="dialog" aria-labelledby="editRollTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="editRollTitle">Edit Roll</h2>
+        <button type="button" class="modal-close" id="closeEditRoll" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editRollForm" class="edit-roll-form">
+          <p class="edit-roll-meta" id="editRollMeta"></p>
+          <label>
+            Player
+            <select id="editRollPlayer" required></select>
+          </label>
+          <label>
+            Total
+            <input type="number" id="editRollValue" min="2" max="12" required>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="editRollKnight">
+            Knight played
+          </label>
+          <div class="game-controls">
+            <button type="button" class="btn" id="cancelEditRoll">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/app.js"></script>
 </body>
 </html>

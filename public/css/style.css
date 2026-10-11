@@ -1015,8 +1015,25 @@ ul {
 }
 
 .game-rolls-table .roll-actions {
-  width: 2.4rem;
+  width: 4.4rem;
   text-align: right;
+  white-space: nowrap;
+}
+
+.edit-roll-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.edit-roll-btn:hover {
+  color: var(--primary);
+  background: rgba(61, 139, 253, 0.12);
 }
 
 .delete-roll-btn {
@@ -1205,6 +1222,21 @@ select.chart-scope-select {
 
 .modal[hidden] {
   display: none;
+}
+
+.modal-stacked {
+  z-index: 300;
+}
+
+.edit-roll-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.edit-roll-form .game-controls {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
 }
 
 .modal-backdrop {

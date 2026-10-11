@@ -145,6 +145,49 @@ app.post('/api/rolls', (req, res) => {
   res.status(201).json(roll);
 });
 
+app.patch('/api/rolls/:id', (req, res) => {
+  const body = req.body || {};
+  const updates = {};
+
+  if (body.value !== undefined) {
+    const rollValue = Number(body.value);
+    if (!Number.isInteger(rollValue) || rollValue < 2 || rollValue > 12) {
+      return res.status(400).json({ error: 'Roll must be an integer between 2 and 12' });
+    }
+    updates.value = rollValue;
+  }
+
+  if (body.playerId !== undefined || body.playerName !== undefined) {
+    const playerId = typeof body.playerId === 'string' ? body.playerId.trim() : '';
+    const playerName = typeof body.playerName === 'string' ? body.playerName.trim() : '';
+    if (!playerId || !playerName) {
+      return res.status(400).json({ error: 'Player is required' });
+    }
+    updates.playerId = playerId;
+    updates.playerName = playerName;
+  }
+
+  if (body.knightPlayed !== undefined) {
+    if (typeof body.knightPlayed !== 'boolean') {
+      return res.status(400).json({ error: 'Knight played must be true or false' });
+    }
+    updates.knightPlayed = body.knightPlayed;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+
+  const data = readJson(FILES.rolls);
+  const roll = data.rolls.find((entry) => entry.id === req.params.id);
+  if (!roll) {
+    return res.status(404).json({ error: 'Roll not found' });
+  }
+  Object.assign(roll, updates, { editedAt: new Date().toISOString() });
+  writeJson(FILES.rolls, data);
+  res.json(roll);
+});
+
 app.delete('/api/rolls/:id', (req, res) => {
   const data = readJson(FILES.rolls);
   const index = data.rolls.findIndex((roll) => roll.id === req.params.id);
