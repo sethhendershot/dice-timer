@@ -1,5 +1,5 @@
 {
-  "currentGameId": "8a402fee-ff1c-4360-b296-bedd12bedef8",
+  "currentGameId": null,
   "games": [
     {
       "id": "546f1af5-2b52-4085-944f-99f1b247adaa",
@@ -14,7 +14,7 @@
     {
       "id": "8a402fee-ff1c-4360-b296-bedd12bedef8",
       "startedAt": "2026-10-10T23:11:52.298Z",
-      "endedAt": null,
+      "endedAt": "2026-10-11T02:11:22.747Z",
       "pointGoal": 21,
       "playerOrder": [
         "d2c44590-a6f2-4e1b-912d-cc06e3b5d629",
