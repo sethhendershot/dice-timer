@@ -96,6 +96,33 @@
             <option value="">Select who called it…</option>
           </select>
         </label>
+        <div class="build-counters" id="rollBuildCounters">
+          <span class="build-counters-title">Built this turn</span>
+          <div class="build-counter" data-field="roadsBuilt">
+            <span class="build-counter-label">Roads</span>
+            <div class="build-counter-controls">
+              <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer roads">&minus;</button>
+              <output class="counter-value" id="rollRoadsBuilt">0</output>
+              <button type="button" class="counter-btn" data-step="1" aria-label="One more roads">+</button>
+            </div>
+          </div>
+          <div class="build-counter" data-field="settlementsBuilt">
+            <span class="build-counter-label">Settlements</span>
+            <div class="build-counter-controls">
+              <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer settlements">&minus;</button>
+              <output class="counter-value" id="rollSettlementsBuilt">0</output>
+              <button type="button" class="counter-btn" data-step="1" aria-label="One more settlements">+</button>
+            </div>
+          </div>
+          <div class="build-counter" data-field="citiesBuilt">
+            <span class="build-counter-label">Cities</span>
+            <div class="build-counter-controls">
+              <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer cities">&minus;</button>
+              <output class="counter-value" id="rollCitiesBuilt">0</output>
+              <button type="button" class="counter-btn" data-step="1" aria-label="One more cities">+</button>
+            </div>
+          </div>
+        </div>
         <div class="roll-submit-row">
           <label class="roll-total-label">
             Total
@@ -136,7 +163,9 @@
     </section>
 
     <section class="panel player-breakdown-panel">
-      <h2>Player Roll Breakdown</h2>
+      <h2>Player Standings</h2>
+      <div id="playerStandings"></div>
+      <h2 class="breakdown-heading">Player Roll Breakdown</h2>
       <div id="playerBreakdown"></div>
     </section>
 
@@ -287,6 +316,33 @@
             Called by
             <select id="editRollCalledBy"></select>
           </label>
+          <div class="build-counters" id="editRollBuildCounters">
+            <span class="build-counters-title">Built this turn</span>
+            <div class="build-counter" data-field="roadsBuilt">
+              <span class="build-counter-label">Roads</span>
+              <div class="build-counter-controls">
+                <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer roads">&minus;</button>
+                <output class="counter-value" id="editRollRoadsBuilt">0</output>
+                <button type="button" class="counter-btn" data-step="1" aria-label="One more roads">+</button>
+              </div>
+            </div>
+            <div class="build-counter" data-field="settlementsBuilt">
+              <span class="build-counter-label">Settlements</span>
+              <div class="build-counter-controls">
+                <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer settlements">&minus;</button>
+                <output class="counter-value" id="editRollSettlementsBuilt">0</output>
+                <button type="button" class="counter-btn" data-step="1" aria-label="One more settlements">+</button>
+              </div>
+            </div>
+            <div class="build-counter" data-field="citiesBuilt">
+              <span class="build-counter-label">Cities</span>
+              <div class="build-counter-controls">
+                <button type="button" class="counter-btn" data-step="-1" aria-label="One fewer cities">&minus;</button>
+                <output class="counter-value" id="editRollCitiesBuilt">0</output>
+                <button type="button" class="counter-btn" data-step="1" aria-label="One more cities">+</button>
+              </div>
+            </div>
+          </div>
           <div class="game-controls">
             <button type="button" class="btn" id="cancelEditRoll">Cancel</button>
             <button type="submit" class="btn btn-primary">Save</button>

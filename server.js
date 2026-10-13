@@ -77,6 +77,38 @@ function cleanPlayerOrder(value) {
   return order;
 }
 
+const BUILD_FIELDS = ['roadsBuilt', 'settlementsBuilt', 'citiesBuilt'];
+const BUILD_LABELS = { roadsBuilt: 'Roads built', settlementsBuilt: 'Settlements built', citiesBuilt: 'Cities built' };
+const MAX_BUILDS_PER_TURN = 15;
+
+// Reads roadsBuilt/settlementsBuilt/citiesBuilt from a request body.
+// Missing fields default to 0 when fillMissing is true, otherwise they are skipped.
+function parseBuildCounts(body, fillMissing) {
+  const counts = {};
+  for (const field of BUILD_FIELDS) {
+    const raw = body[field];
+    if (raw === undefined || raw === null || raw === '') {
+      if (fillMissing) counts[field] = 0;
+      continue;
+    }
+    const count = Number(raw);
+    if (!Number.isInteger(count) || count < 0 || count > MAX_BUILDS_PER_TURN) {
+      return { error: `${BUILD_LABELS[field]} must be a whole number from 0 to ${MAX_BUILDS_PER_TURN}` };
+    }
+    counts[field] = count;
+  }
+  return { counts };
+}
+
+function parseAwardHolder(value) {
+  if (value === null || value === '') return { id: null };
+  if (typeof value !== 'string') return { error: 'Award holder must be a player id or null' };
+  const id = value.trim();
+  const known = readJson(FILES.players).players.some((player) => player.id === id);
+  if (!known) return { error: 'Award holder must be a known player' };
+  return { id };
+}
+
 // Resolves the "called it" fields for a roll. Returns { error } or { calledIt, calledById, calledByName }.
 // existing is the roll being edited (if any) so a caller who has since been removed can be kept as-is.
 function resolveCalledIt(calledIt, calledById, existing) {
@@ -160,6 +192,10 @@ app.post('/api/rolls', (req, res) => {
   if (called.error) {
     return res.status(400).json({ error: called.error });
   }
+  const builds = parseBuildCounts(req.body, true);
+  if (builds.error) {
+    return res.status(400).json({ error: builds.error });
+  }
   const data = readJson(FILES.rolls);
   const roll = {
     id: newId(),
@@ -171,6 +207,7 @@ app.post('/api/rolls', (req, res) => {
     calledIt: called.calledIt,
     calledById: called.calledById,
     calledByName: called.calledByName,
+    ...builds.counts,
     timestamp: new Date().toISOString(),
   };
   data.rolls.push(roll);
@@ -206,6 +243,12 @@ app.patch('/api/rolls/:id', (req, res) => {
     }
     updates.knightPlayed = body.knightPlayed;
   }
+
+  const builds = parseBuildCounts(body, false);
+  if (builds.error) {
+    return res.status(400).json({ error: builds.error });
+  }
+  Object.assign(updates, builds.counts);
 
   const data = readJson(FILES.rolls);
   const roll = data.rolls.find((entry) => entry.id === req.params.id);
@@ -306,6 +349,30 @@ app.patch('/api/games/:id/goal', (req, res) => {
     return res.status(404).json({ error: 'Game not found' });
   }
   game.pointGoal = pointGoal;
+  writeJson(FILES.games, data);
+  res.json(game);
+});
+
+app.patch('/api/games/:id/awards', (req, res) => {
+  const body = req.body || {};
+  const updates = {};
+  for (const field of ['longestRoadPlayerId', 'largestArmyPlayerId']) {
+    if (body[field] === undefined) continue;
+    const holder = parseAwardHolder(body[field]);
+    if (holder.error) {
+      return res.status(400).json({ error: holder.error });
+    }
+    updates[field] = holder.id;
+  }
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+  const data = readJson(FILES.games);
+  const game = data.games.find((entry) => entry.id === req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  Object.assign(game, updates);
   writeJson(FILES.games, data);
   res.json(game);
 });

@@ -37,6 +37,16 @@
   let gameClockInterval = null;
   let selectedPastGameId = null;
   let editingRollId = null;
+
+  const BUILD_FIELDS = ['roadsBuilt', 'settlementsBuilt', 'citiesBuilt'];
+  const STARTING_ROADS = 2;
+  const STARTING_SETTLEMENTS = 2;
+  const PIECE_LIMITS = { roads: 15, settlements: 5, cities: 4 };
+  const AWARD_POINTS = 2;
+  const AWARDS = [
+    { key: 'longestRoad', field: 'longestRoadPlayerId', label: 'Longest Road', short: 'LR' },
+    { key: 'largestArmy', field: 'largestArmyPlayerId', label: 'Largest Army', short: 'LA' },
+  ];
   let rollChart = null;
 
   // --- Timer state ---
@@ -315,7 +325,170 @@
     return Array.from(byPlayer.values()).sort((a, b) => b.total - a.total);
   }
 
+  // --- Builds, points and awards ---
+
+  function buildCount(roll, field) {
+    const count = Number(roll[field]);
+    return Number.isInteger(count) && count > 0 ? count : 0;
+  }
+
+  function getCounterValues(prefix) {
+    const values = {};
+    BUILD_FIELDS.forEach((field) => {
+      const el = $(prefix + field[0].toUpperCase() + field.slice(1));
+      values[field] = Number(el.value || el.textContent) || 0;
+    });
+    return values;
+  }
+
+  function setCounterValues(prefix, values = {}) {
+    BUILD_FIELDS.forEach((field) => {
+      const el = $(prefix + field[0].toUpperCase() + field.slice(1));
+      const count = Number.isInteger(values[field]) && values[field] > 0 ? values[field] : 0;
+      el.value = String(count);
+      el.textContent = String(count);
+    });
+  }
+
+  function bindBuildCounters(containerId) {
+    $(containerId).addEventListener('click', (e) => {
+      const btn = e.target.closest('.counter-btn');
+      if (!btn) return;
+      const output = btn.closest('.build-counter').querySelector('.counter-value');
+      const next = Math.min(15, Math.max(0, (Number(output.textContent) || 0) + Number(btn.dataset.step)));
+      output.value = String(next);
+      output.textContent = String(next);
+    });
+  }
+
+  function getGamePlayers(game, gameRolls) {
+    const ids = [...(game?.playerOrder || [])];
+    gameRolls.forEach((r) => {
+      if (r.playerId && !ids.includes(r.playerId)) ids.push(r.playerId);
+    });
+    return ids.map((id) => {
+      const player = players.find((p) => p.id === id);
+      const roll = gameRolls.find((r) => r.playerId === id);
+      return { id, name: player ? player.name : (roll ? roll.playerName : 'Unknown player') };
+    });
+  }
+
+  function buildStandings(game) {
+    const gameRolls = getRollsForGame(game.id);
+    return getGamePlayers(game, gameRolls).map((player) => {
+      let roadsBuilt = 0;
+      let settlementsBuilt = 0;
+      let citiesBuilt = 0;
+      let cityWithoutSettlement = false;
+      gameRolls.filter((r) => r.playerId === player.id).forEach((r) => {
+        roadsBuilt += buildCount(r, 'roadsBuilt');
+        settlementsBuilt += buildCount(r, 'settlementsBuilt');
+        citiesBuilt += buildCount(r, 'citiesBuilt');
+        if (STARTING_SETTLEMENTS + settlementsBuilt - citiesBuilt < 0) cityWithoutSettlement = true;
+      });
+      const roads = STARTING_ROADS + roadsBuilt;
+      const settlements = STARTING_SETTLEMENTS + settlementsBuilt - citiesBuilt;
+      const cities = citiesBuilt;
+      const awards = AWARDS.filter((award) => game[award.field] === player.id);
+      const buildPoints = STARTING_SETTLEMENTS + settlementsBuilt + citiesBuilt;
+      const points = buildPoints + awards.length * AWARD_POINTS;
+
+      const warnings = [];
+      if (roads > PIECE_LIMITS.roads) warnings.push(`${roads} roads (limit ${PIECE_LIMITS.roads})`);
+      if (settlements > PIECE_LIMITS.settlements) warnings.push(`${settlements} settlements on the board (limit ${PIECE_LIMITS.settlements})`);
+      if (cities > PIECE_LIMITS.cities) warnings.push(`${cities} cities (limit ${PIECE_LIMITS.cities})`);
+      if (cityWithoutSettlement) warnings.push('a city was built with no settlement to upgrade');
+
+      return { ...player, roads, settlements, cities, points, awards, warnings };
+    });
+  }
+
+  function renderStandingsTable(game, { editable = false } = {}) {
+    const standings = buildStandings(game);
+    if (standings.length === 0) {
+      return '<p class="empty-state">Add players to the turn order to track points</p>';
+    }
+    const goal = pointGoalOf(game);
+    const awardCell = (award, p) => {
+      const holds = game[award.field] === p.id;
+      if (!editable) {
+        return `<td class="pb-award">${holds ? `<span class="award-badge" title="${award.label}">${award.short}</span>` : ''}</td>`;
+      }
+      return `<td class="pb-award">
+        <button type="button" class="award-toggle${holds ? ' active' : ''}" data-field="${award.field}" data-player="${escapeAttr(p.id)}"
+          aria-pressed="${holds}" title="${holds ? `Remove ${award.label} from ${escapeAttr(p.name)}` : `Give ${award.label} to ${escapeAttr(p.name)}`}">${award.short}</button>
+      </td>`;
+    };
+    const warnings = standings.filter((p) => p.warnings.length);
+    return `
+      <div class="player-breakdown-table-wrap">
+        <table class="player-breakdown-table standings-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th title="Settlements and cities, plus 2 for each award">Points</th>
+              <th>Roads</th>
+              <th title="Settlements on the board">Settl.</th>
+              <th>Cities</th>
+              <th title="Longest Road (+${AWARD_POINTS})">Longest Road</th>
+              <th title="Largest Army (+${AWARD_POINTS})">Largest Army</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${standings.map((p) => `
+              <tr>
+                <td class="pb-player">${escapeHtml(p.name)}${p.warnings.length ? ' <span class="standings-warn-icon" title="Check builds">&#9888;</span>' : ''}</td>
+                <td class="pb-total pb-points${p.points >= goal ? ' reached' : ''}">${p.points}</td>
+                <td class="pb-count has-roll">${p.roads}</td>
+                <td class="pb-count has-roll">${p.settlements}</td>
+                <td class="pb-count has-roll">${p.cities}</td>
+                ${AWARDS.map((award) => awardCell(award, p)).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${warnings.length ? `<ul class="standings-warnings">${warnings.map((p) =>
+        `<li>&#9888; ${escapeHtml(p.name)}: ${p.warnings.map(escapeHtml).join('; ')}</li>`).join('')}</ul>` : ''}
+    `;
+  }
+
+  function renderPlayerStandings() {
+    const el = $('playerStandings');
+    const game = currentGame();
+    if (!currentGameId || !game) {
+      el.innerHTML = '<p class="empty-state">Start a game to track points</p>';
+      return;
+    }
+    el.innerHTML = renderStandingsTable(game, { editable: true });
+    el.querySelectorAll('.award-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        toggleAward(game.id, btn.dataset.field, btn.dataset.player).catch((err) => showToast(err.message, 'error'));
+      });
+    });
+  }
+
+  async function toggleAward(gameId, field, playerId) {
+    const game = games.find((g) => g.id === gameId);
+    if (!game) return;
+    const nextHolder = game[field] === playerId ? null : playerId;
+    const updated = await api(`/api/games/${gameId}/awards`, {
+      method: 'PATCH',
+      body: JSON.stringify({ [field]: nextHolder }),
+    });
+    const index = games.findIndex((g) => g.id === gameId);
+    if (index !== -1) games[index] = updated;
+    renderPlayerStandings();
+    if (!$('pastGamesModal').hidden && selectedPastGameId === gameId) {
+      renderPastGameDetail(gameId);
+    }
+    const award = AWARDS.find((a) => a.field === field);
+    const holder = nextHolder ? getGamePlayers(updated, getRollsForGame(gameId)).find((p) => p.id === nextHolder) : null;
+    showToast(holder ? `${award.label}: ${holder.name}` : `${award.label} cleared`);
+  }
+
   function renderPlayerBreakdown() {
+    renderPlayerStandings();
     const el = $('playerBreakdown');
     const gameRolls = getGameRolls();
 
@@ -482,6 +655,8 @@
         <span>To: <strong id="pastGamePoints">${pointGoalOf(game)}</strong></span>
         <span>Total rolls: <strong>${gameRolls.length}</strong></span>
       </div>
+      <h4 class="past-game-subheading">Points</h4>
+      ${renderStandingsTable(game)}
       ${winner
         ? `<div class="past-game-winner"><span class="trophy">&#9733;</span> Winner: <strong>${escapeHtml(winner.playerName)}</strong>${winner.winnerHadKnight === true ? ' <span class="knight-badge" title="Winner had played a knight">&#9822; Knight</span>' : ''}</div>`
         : '<p class="empty-state">No winner recorded for this game</p>'}
@@ -585,6 +760,11 @@
       ? ''
       : `<option value="${escapeAttr(roll.calledById)}" data-name="${escapeAttr(roll.calledByName || '')}">${escapeHtml(roll.calledByName || 'Unknown player')}</option>`;
     $('editRollCalledBy').innerHTML = `<option value="">Select who called it…</option>${calledMissing}${options}`;
+    setCounterValues('editRoll', {
+      roadsBuilt: buildCount(roll, 'roadsBuilt'),
+      settlementsBuilt: buildCount(roll, 'settlementsBuilt'),
+      citiesBuilt: buildCount(roll, 'citiesBuilt'),
+    });
     $('editRollCalledIt').checked = roll.calledIt === true;
     syncCalledByField('editRollCalledIt', 'editRollCalledByField', 'editRollCalledBy');
     if (roll.calledIt === true && roll.calledById) $('editRollCalledBy').value = roll.calledById;
@@ -628,6 +808,7 @@
         knightPlayed: $('editRollKnight').checked,
         calledIt,
         calledById,
+        ...getCounterValues('editRoll'),
       }),
     });
     const index = rolls.findIndex((entry) => entry.id === id);
@@ -1006,6 +1187,7 @@
         knightPlayed,
         calledIt,
         calledById,
+        ...getCounterValues('roll'),
       }),
     });
     rolls.push(roll);
@@ -1022,6 +1204,7 @@
     $('rollValue').value = '';
     $('rollKnightPlayed').checked = false;
     $('rollCalledIt').checked = false;
+    setCounterValues('roll');
     syncCalledByField('rollCalledIt', 'rollCalledByField', 'rollCalledBy');
     syncDiceSelection();
     selectNextPlayer(playerId);
@@ -1378,6 +1561,9 @@
     });
 
     $('rollValue').addEventListener('input', syncDiceSelection);
+    bindBuildCounters('rollBuildCounters');
+    bindBuildCounters('editRollBuildCounters');
+
     $('rollCalledIt').addEventListener('change', () => {
       syncCalledByField('rollCalledIt', 'rollCalledByField', 'rollCalledBy');
     });

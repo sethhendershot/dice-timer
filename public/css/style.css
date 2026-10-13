@@ -593,6 +593,124 @@ label.checkbox-label:has(input:disabled) {
   cursor: default;
 }
 
+.build-counters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.build-counters-title {
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.build-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.build-counter-controls {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.counter-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1;
+  width: 1.9rem;
+  height: 1.9rem;
+  cursor: pointer;
+}
+
+.counter-btn:hover {
+  background: rgba(61, 139, 253, 0.15);
+}
+
+.counter-value {
+  min-width: 1.6rem;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-heading {
+  margin-top: 1.25rem;
+}
+
+.standings-table .pb-points.reached {
+  color: var(--success);
+}
+
+.award-toggle {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+}
+
+.award-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.award-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent-dim);
+  color: #1a1a1a;
+}
+
+.award-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #1a1a1a;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+}
+
+.standings-warn-icon {
+  color: var(--accent);
+}
+
+.standings-warnings {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+
+.past-game-subheading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.past-game-detail .standings-table + .standings-warnings,
+.past-game-detail .player-breakdown-table-wrap {
+  margin-bottom: 1rem;
+}
+
 .roll-flags {
   display: flex;
   flex-wrap: wrap;
