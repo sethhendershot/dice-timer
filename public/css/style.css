@@ -593,6 +593,49 @@ label.checkbox-label:has(input:disabled) {
   cursor: default;
 }
 
+.current-turn {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.current-turn-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.current-turn-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-turn.is-active {
+  background: rgba(232, 168, 56, 0.12);
+  border-color: rgba(232, 168, 56, 0.45);
+}
+
+.current-turn.is-active .current-turn-name {
+  color: var(--accent);
+}
+
+.standings-table tbody tr.current-turn-row {
+  background: rgba(232, 168, 56, 0.1);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 .build-counters {
   display: flex;
   flex-wrap: wrap;

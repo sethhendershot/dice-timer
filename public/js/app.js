@@ -420,6 +420,8 @@
       </td>`;
     };
     const warnings = standings.filter((p) => p.warnings.length);
+    const turnRoll = editable ? getCurrentTurnRoll() : null;
+    const turnPlayerId = turnRoll ? turnRoll.playerId : null;
     return `
       <div class="player-breakdown-table-wrap">
         <table class="player-breakdown-table standings-table">
@@ -436,7 +438,7 @@
           </thead>
           <tbody>
             ${standings.map((p) => `
-              <tr>
+              <tr${p.id === turnPlayerId ? ' class="current-turn-row" title="Current turn"' : ''}>
                 <td class="pb-player">${escapeHtml(p.name)}${p.warnings.length ? ' <span class="standings-warn-icon" title="Check builds">&#9888;</span>' : ''}</td>
                 <td class="pb-total pb-points${p.points >= goal ? ' reached' : ''}">${p.points}</td>
                 <td class="pb-count has-roll">${p.roads}</td>
@@ -453,7 +455,36 @@
     `;
   }
 
+  // The current turn belongs to whoever's roll was recorded last in the active game:
+  // they are the one entering builds, knights and so on.
+  function getCurrentTurnRoll() {
+    const gameRolls = getGameRolls();
+    return gameRolls.length ? gameRolls[gameRolls.length - 1] : null;
+  }
+
+  function renderCurrentTurn() {
+    const box = $('currentTurn');
+    const nameEl = $('currentTurnName');
+    const roll = currentGameId ? getCurrentTurnRoll() : null;
+    box.classList.toggle('is-active', Boolean(roll));
+    if (!currentGameId) {
+      nameEl.textContent = 'No active game';
+      box.title = 'Start a game to track turns';
+      return;
+    }
+    if (!roll) {
+      nameEl.textContent = 'No rolls yet';
+      box.title = 'Record the first roll of this game';
+      return;
+    }
+    const player = players.find((p) => p.id === roll.playerId);
+    const name = player ? player.name : roll.playerName;
+    nameEl.textContent = name;
+    box.title = `${name} rolled ${roll.value} at ${formatRollTime(roll.timestamp)}`;
+  }
+
   function renderPlayerStandings() {
+    renderCurrentTurn();
     const el = $('playerStandings');
     const game = currentGame();
     if (!currentGameId || !game) {
