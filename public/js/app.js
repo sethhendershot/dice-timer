@@ -601,10 +601,11 @@
     bindRollDeleteButtons(tbody);
   }
 
+  // gameRolls arrive oldest-first; number them in that order, then show newest first.
   function renderRollRows(gameRolls, compact = false) {
-    return gameRolls.map((r, index) => `
+    return gameRolls.map((r, index) => ({ r, num: index + 1 })).reverse().map(({ r, num }) => `
       <tr>
-        <td class="roll-num">${index + 1}</td>
+        <td class="roll-num">${num}</td>
         <td class="roll-value ${rollValueClass(r.value)}">${r.value}</td>
         <td class="roll-player">${escapeHtml(r.playerName)}${r.knightPlayed === true ? ' <span class="knight-badge" title="Knight played" aria-label="Knight played">&#9822;</span>' : ''}${r.calledIt === true && r.calledByName ? ` <span class="called-badge" title="Called by ${escapeAttr(r.calledByName)}">&#127919; ${escapeHtml(r.calledByName)}</span>` : ''}</td>
         ${compact ? '' : `<td class="roll-date">${formatRollDate(r.timestamp)}</td>`}
