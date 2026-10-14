@@ -377,6 +377,21 @@ app.patch('/api/games/:id/awards', (req, res) => {
   res.json(game);
 });
 
+app.patch('/api/games/:id/bias', (req, res) => {
+  const bias = req.body && req.body.bias;
+  if (typeof bias !== 'boolean') {
+    return res.status(400).json({ error: 'Bias must be true or false' });
+  }
+  const data = readJson(FILES.games);
+  const game = data.games.find((entry) => entry.id === req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  game.bias = bias;
+  writeJson(FILES.games, data);
+  res.json(game);
+});
+
 app.patch('/api/games/:id/order', (req, res) => {
   const data = readJson(FILES.games);
   const game = data.games.find((g) => g.id === req.params.id);

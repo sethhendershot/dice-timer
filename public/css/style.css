@@ -593,6 +593,50 @@ label.checkbox-label:has(input:disabled) {
   cursor: default;
 }
 
+.bias-toggle {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.bias-toggle .header-stat-value {
+  min-width: 2.2rem;
+}
+
+.bias-toggle:hover:not(:disabled) {
+  border-color: var(--danger);
+}
+
+.bias-toggle:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.bias-toggle.is-biased {
+  border-color: rgba(232, 93, 93, 0.6);
+  background: rgba(232, 93, 93, 0.15);
+}
+
+.bias-toggle.is-biased .header-stat-value {
+  color: var(--danger);
+}
+
+.bias-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+  transform: rotate(-4deg);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .current-turn {
   display: flex;
   flex-direction: column;

@@ -647,7 +647,7 @@
         <li>
           <button type="button" class="past-game-item${isSelected ? ' active' : ''}" data-id="${game.id}">
             <div class="game-date">${formatRollDate(game.startedAt)}</div>
-            <div class="game-meta">${gameRolls.length} roll${gameRolls.length === 1 ? '' : 's'}${winner ? ` · ${escapeHtml(winner.playerName)} won` : ''}</div>
+            <div class="game-meta">${gameRolls.length} roll${gameRolls.length === 1 ? '' : 's'}${winner ? ` · ${escapeHtml(winner.playerName)} won` : ''}${renderBiasBadge(game)}</div>
             <span class="game-status ${isActive ? 'active' : 'completed'}">${isActive ? 'Active' : 'Completed'}</span>
           </button>
         </li>
@@ -676,7 +676,7 @@
 
     detail.innerHTML = `
       <div class="past-game-heading">
-        <h3>${formatRollDate(game.startedAt)}</h3>
+        <h3>${formatRollDate(game.startedAt)}${renderBiasBadge(game)}</h3>
         <button type="button" class="btn btn-danger" id="deletePastGame">Delete game</button>
       </div>
       <div class="past-game-stats">
@@ -1419,8 +1419,50 @@
     return formatElapsed(end - start);
   }
 
+  function hasBias(game) {
+    return Boolean(game) && game.bias === true;
+  }
+
+  function renderBiasBadge(game) {
+    return hasBias(game)
+      ? '<span class="bias-badge" title="The gavel of no bias was overruled">&#9878; Bias</span>'
+      : '';
+  }
+
+  function updateBiasToggle(game) {
+    const btn = $('biasToggle');
+    const active = Boolean(game) && !game.endedAt;
+    const bias = active && hasBias(game);
+    btn.disabled = !active;
+    btn.classList.toggle('is-biased', bias);
+    btn.setAttribute('aria-pressed', String(bias));
+    $('biasValue').textContent = bias ? 'Yes!' : 'No';
+    btn.title = !active
+      ? 'Start a game to record bias'
+      : (bias ? 'Bias detected this game. Click to clear the record.' : 'The game of no bias. Click if there was bias.');
+  }
+
+  async function toggleBias() {
+    const game = currentGame();
+    if (!game || game.endedAt) return;
+    const bias = !hasBias(game);
+    const updated = await api(`/api/games/${game.id}/bias`, {
+      method: 'PATCH',
+      body: JSON.stringify({ bias }),
+    });
+    const index = games.findIndex((g) => g.id === game.id);
+    if (index !== -1) games[index] = updated;
+    updateHeaderStatus();
+    if (!$('pastGamesModal').hidden) {
+      renderPastGamesList();
+      if (selectedPastGameId) renderPastGameDetail(selectedPastGameId);
+    }
+    showToast(bias ? 'Bias recorded. The gavel is disappointed.' : 'Bias cleared. No bias here.');
+  }
+
   function updateHeaderStatus() {
     const game = currentGame();
+    updateBiasToggle(game);
     const goal = game ? pointGoalOf(game) : draftPointGoal;
     $('pointGoalValue').textContent = String(goal);
     const goalInput = $('pointGoal');
@@ -1592,6 +1634,9 @@
     });
 
     $('rollValue').addEventListener('input', syncDiceSelection);
+    $('biasToggle').addEventListener('click', () => {
+      toggleBias().catch((err) => showToast(err.message, 'error'));
+    });
     bindBuildCounters('rollBuildCounters');
     bindBuildCounters('editRollBuildCounters');
 
