@@ -1146,9 +1146,13 @@
     });
   }
 
+  // Board order: top row 2-6, then the tall 7, then the bottom row reversed (12 under 2 ... 8 under 6).
+  // DOM order follows the visual order so Tab moves across each row left to right.
+  const QUICK_ROLL_ORDER = [2, 3, 4, 5, 6, 7, 12, 11, 10, 9, 8];
+
   function buildQuickRolls() {
     const container = $('quickRolls');
-    container.innerHTML = CATAN_VALUES.map((value) => {
+    container.innerHTML = QUICK_ROLL_ORDER.map((value) => {
       const ways = DICE_WAYS[value];
       const pairs = ways.map(([a, b]) => `<span class="dice-pair">${diceSvg(a)}${diceSvg(b)}</span>`).join('');
       const tone = value === 7 ? ' seven' : HOT_NUMBERS.has(value) ? ' hot' : '';

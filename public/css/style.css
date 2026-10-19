@@ -935,6 +935,13 @@ select:focus {
   grid-row: 1 / span 2;
 }
 
+/* Bottom row runs 12 -> 8 so 8 sits under 6 and 12 under 2. */
+.quick-roll-btn[data-value="12"] { grid-column: 1; grid-row: 2; }
+.quick-roll-btn[data-value="11"] { grid-column: 2; grid-row: 2; }
+.quick-roll-btn[data-value="10"] { grid-column: 3; grid-row: 2; }
+.quick-roll-btn[data-value="9"] { grid-column: 4; grid-row: 2; }
+.quick-roll-btn[data-value="8"] { grid-column: 5; grid-row: 2; }
+
 .quick-roll-btn.seven .dice-ways {
   flex: 1;
   justify-content: space-between;
