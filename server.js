@@ -77,11 +77,13 @@ function cleanPlayerOrder(value) {
   return order;
 }
 
-const BUILD_FIELDS = ['roadsBuilt', 'settlementsBuilt', 'citiesBuilt'];
-const BUILD_LABELS = { roadsBuilt: 'Roads built', settlementsBuilt: 'Settlements built', citiesBuilt: 'Cities built' };
+// Roads are no longer collected per roll: a roadsBuilt value sent by a client is ignored,
+// and roadsBuilt already stored on older rolls is left as it is.
+const BUILD_FIELDS = ['settlementsBuilt', 'citiesBuilt'];
+const BUILD_LABELS = { settlementsBuilt: 'Settlements built', citiesBuilt: 'Cities built' };
 const MAX_BUILDS_PER_TURN = 15;
 
-// Reads roadsBuilt/settlementsBuilt/citiesBuilt from a request body.
+// Reads settlementsBuilt/citiesBuilt from a request body.
 // Missing fields default to 0 when fillMissing is true, otherwise they are skipped.
 function parseBuildCounts(body, fillMissing) {
   const counts = {};

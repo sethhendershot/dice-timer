@@ -38,10 +38,9 @@
   let selectedPastGameId = null;
   let editingRollId = null;
 
-  const BUILD_FIELDS = ['roadsBuilt', 'settlementsBuilt', 'citiesBuilt'];
-  const STARTING_ROADS = 2;
+  const BUILD_FIELDS = ['settlementsBuilt', 'citiesBuilt'];
   const STARTING_SETTLEMENTS = 2;
-  const PIECE_LIMITS = { roads: 15, settlements: 5, cities: 4 };
+  const PIECE_LIMITS = { settlements: 5, cities: 4 };
   const AWARD_POINTS = 2;
   const AWARDS = [
     { key: 'longestRoad', field: 'longestRoadPlayerId', label: 'Longest Road', short: 'LR' },
@@ -376,17 +375,14 @@
   function buildStandings(game) {
     const gameRolls = getRollsForGame(game.id);
     return getGamePlayers(game, gameRolls).map((player) => {
-      let roadsBuilt = 0;
       let settlementsBuilt = 0;
       let citiesBuilt = 0;
       let cityWithoutSettlement = false;
       gameRolls.filter((r) => r.playerId === player.id).forEach((r) => {
-        roadsBuilt += buildCount(r, 'roadsBuilt');
         settlementsBuilt += buildCount(r, 'settlementsBuilt');
         citiesBuilt += buildCount(r, 'citiesBuilt');
         if (STARTING_SETTLEMENTS + settlementsBuilt - citiesBuilt < 0) cityWithoutSettlement = true;
       });
-      const roads = STARTING_ROADS + roadsBuilt;
       const settlements = STARTING_SETTLEMENTS + settlementsBuilt - citiesBuilt;
       const cities = citiesBuilt;
       const awards = AWARDS.filter((award) => game[award.field] === player.id);
@@ -394,12 +390,11 @@
       const points = buildPoints + awards.length * AWARD_POINTS;
 
       const warnings = [];
-      if (roads > PIECE_LIMITS.roads) warnings.push(`${roads} roads (limit ${PIECE_LIMITS.roads})`);
       if (settlements > PIECE_LIMITS.settlements) warnings.push(`${settlements} settlements on the board (limit ${PIECE_LIMITS.settlements})`);
       if (cities > PIECE_LIMITS.cities) warnings.push(`${cities} cities (limit ${PIECE_LIMITS.cities})`);
       if (cityWithoutSettlement) warnings.push('a city was built with no settlement to upgrade');
 
-      return { ...player, roads, settlements, cities, points, awards, warnings };
+      return { ...player, settlements, cities, points, awards, warnings };
     });
   }
 
@@ -429,7 +424,6 @@
             <tr>
               <th>Player</th>
               <th title="Settlements and cities, plus 2 for each award">Points</th>
-              <th>Roads</th>
               <th title="Settlements on the board">Settl.</th>
               <th>Cities</th>
               <th title="Longest Road (+${AWARD_POINTS})">Longest Road</th>
@@ -441,7 +435,6 @@
               <tr${p.id === turnPlayerId ? ' class="current-turn-row" title="Current turn"' : ''}>
                 <td class="pb-player">${escapeHtml(p.name)}${p.warnings.length ? ' <span class="standings-warn-icon" title="Check builds">&#9888;</span>' : ''}</td>
                 <td class="pb-total pb-points${p.points >= goal ? ' reached' : ''}">${p.points}</td>
-                <td class="pb-count has-roll">${p.roads}</td>
                 <td class="pb-count has-roll">${p.settlements}</td>
                 <td class="pb-count has-roll">${p.cities}</td>
                 ${AWARDS.map((award) => awardCell(award, p)).join('')}
@@ -793,7 +786,6 @@
       : `<option value="${escapeAttr(roll.calledById)}" data-name="${escapeAttr(roll.calledByName || '')}">${escapeHtml(roll.calledByName || 'Unknown player')}</option>`;
     $('editRollCalledBy').innerHTML = `<option value="">Select who called it…</option>${calledMissing}${options}`;
     setCounterValues('editRoll', {
-      roadsBuilt: buildCount(roll, 'roadsBuilt'),
       settlementsBuilt: buildCount(roll, 'settlementsBuilt'),
       citiesBuilt: buildCount(roll, 'citiesBuilt'),
     });
