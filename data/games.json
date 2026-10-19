@@ -1,5 +1,5 @@
 {
-  "currentGameId": null,
+  "currentGameId": "ae092aee-7799-4c09-869c-d9305fd5e13a",
   "games": [
     {
       "id": "546f1af5-2b52-4085-944f-99f1b247adaa",
@@ -21,6 +21,19 @@
         "b51afdcd-9f7b-43c8-835a-a2c9b2d74a63",
         "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4"
       ]
+    },
+    {
+      "id": "ae092aee-7799-4c09-869c-d9305fd5e13a",
+      "startedAt": "2026-10-14T00:22:23.808Z",
+      "endedAt": null,
+      "pointGoal": 21,
+      "playerOrder": [
+        "b51afdcd-9f7b-43c8-835a-a2c9b2d74a63",
+        "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4",
+        "d2c44590-a6f2-4e1b-912d-cc06e3b5d629"
+      ],
+      "longestRoadPlayerId": "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4",
+      "largestArmyPlayerId": "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4"
     }
   ]
 }

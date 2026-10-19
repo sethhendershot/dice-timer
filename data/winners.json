@@ -28,6 +28,14 @@
       "gameId": "8a402fee-ff1c-4360-b296-bedd12bedef8",
       "winnerHadKnight": true,
       "timestamp": "2026-10-11T02:03:59.318Z"
+    },
+    {
+      "id": "91f3b16f-b5f7-44b1-905e-fdd934e51923",
+      "playerId": "d2c4d8ad-ba84-4fc7-9aa4-250d8c13daa4",
+      "playerName": "Adam",
+      "gameId": "ae092aee-7799-4c09-869c-d9305fd5e13a",
+      "winnerHadKnight": true,
+      "timestamp": "2026-10-14T02:19:49.869Z"
     }
   ]
 }
