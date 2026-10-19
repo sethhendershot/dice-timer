@@ -81,7 +81,8 @@ function cleanPlayerOrder(value) {
 // and roadsBuilt already stored on older rolls is left as it is.
 const BUILD_FIELDS = ['settlementsBuilt', 'citiesBuilt'];
 const BUILD_LABELS = { settlementsBuilt: 'Settlements built', citiesBuilt: 'Cities built' };
-const MAX_BUILDS_PER_TURN = 15;
+// Sanity bound on one turn's input only; house rules allow extra pieces, so there are no piece-count limits.
+const MAX_BUILDS_PER_TURN = 99;
 
 // Reads settlementsBuilt/citiesBuilt from a request body.
 // Missing fields default to 0 when fillMissing is true, otherwise they are skipped.

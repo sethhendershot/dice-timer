@@ -40,7 +40,8 @@
 
   const BUILD_FIELDS = ['settlementsBuilt', 'citiesBuilt'];
   const STARTING_SETTLEMENTS = 2;
-  const PIECE_LIMITS = { settlements: 5, cities: 4 };
+  // House rules allow extra pieces, so there are no piece-count limits; counters only cap one turn's input.
+  const MAX_BUILDS_PER_TURN = 99;
   const AWARD_POINTS = 2;
   const AWARDS = [
     { key: 'longestRoad', field: 'longestRoadPlayerId', label: 'Longest Road', short: 'LR' },
@@ -354,7 +355,7 @@
       const btn = e.target.closest('.counter-btn');
       if (!btn) return;
       const output = btn.closest('.build-counter').querySelector('.counter-value');
-      const next = Math.min(15, Math.max(0, (Number(output.textContent) || 0) + Number(btn.dataset.step)));
+      const next = Math.min(MAX_BUILDS_PER_TURN, Math.max(0, (Number(output.textContent) || 0) + Number(btn.dataset.step)));
       output.value = String(next);
       output.textContent = String(next);
     });
@@ -390,8 +391,6 @@
       const points = buildPoints + awards.length * AWARD_POINTS;
 
       const warnings = [];
-      if (settlements > PIECE_LIMITS.settlements) warnings.push(`${settlements} settlements on the board (limit ${PIECE_LIMITS.settlements})`);
-      if (cities > PIECE_LIMITS.cities) warnings.push(`${cities} cities (limit ${PIECE_LIMITS.cities})`);
       if (cityWithoutSettlement) warnings.push('a city was built with no settlement to upgrade');
 
       return { ...player, settlements, cities, points, awards, warnings };
