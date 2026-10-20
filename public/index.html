@@ -173,9 +173,12 @@
     <section class="panel game-rolls-panel">
       <div class="panel-heading">
         <h2>This Game&rsquo;s Rolls</h2>
-        <span class="roll-count" id="gameRollCount">0 rolls</span>
+        <div class="panel-heading-actions">
+          <span class="roll-count" id="gameRollCount">0 rolls</span>
+          <button type="button" class="panel-expand-btn" id="expandGameRolls" title="Show all of this game's rolls" aria-label="Expand this game's rolls"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h7v2H7.41l4.3 4.29-1.42 1.42L6 7.41V11H4V4zm16 16h-7v-2h3.59l-4.3-4.29 1.42-1.42L18 16.59V13h2v7z"/></svg></button>
+        </div>
       </div>
-      <div class="game-rolls-table-wrap">
+      <div class="game-rolls-table-wrap game-rolls-capped">
         <table class="game-rolls-table">
           <thead>
             <tr>
@@ -280,6 +283,33 @@
         </div>
         <div class="past-game-detail" id="pastGameDetail">
           <p class="empty-state">Select a game to view its rolls and results</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="gameRollsModal" hidden>
+    <div class="modal-backdrop" id="gameRollsBackdrop"></div>
+    <div class="modal-dialog" role="dialog" aria-labelledby="gameRollsTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="gameRollsTitle">This Game&rsquo;s Rolls <span class="roll-count" id="gameRollsModalCount"></span></h2>
+        <button type="button" class="modal-close" id="closeGameRolls" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="game-rolls-table-wrap">
+          <table class="game-rolls-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Roll</th>
+                <th>Player</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th class="roll-actions"><span class="sr-only">Delete</span></th>
+              </tr>
+            </thead>
+            <tbody id="gameRollsModalBody"></tbody>
+          </table>
         </div>
       </div>
     </div>

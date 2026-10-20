@@ -572,8 +572,24 @@
   }
 
   function renderGameRollHistory() {
-    const tbody = $('gameRollHistory');
-    const countEl = $('gameRollCount');
+    renderGameRollHistoryInto($('gameRollHistory'), $('gameRollCount'));
+    if (!$('gameRollsModal').hidden) {
+      renderGameRollHistoryInto($('gameRollsModalBody'), $('gameRollsModalCount'));
+    }
+  }
+
+  function openGameRollsModal() {
+    $('gameRollsModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+    renderGameRollHistory();
+  }
+
+  function closeGameRollsModal() {
+    $('gameRollsModal').hidden = true;
+    releaseModalScroll();
+  }
+
+  function renderGameRollHistoryInto(tbody, countEl) {
     const gameRolls = getGameRolls();
 
     if (!currentGameId) {
@@ -842,7 +858,7 @@
   }
 
   function releaseModalScroll() {
-    const open = ['playersModal', 'pastGamesModal', 'gameModal', 'editRollModal'].some((id) => !$(id).hidden);
+    const open = ['playersModal', 'pastGamesModal', 'gameModal', 'editRollModal', 'gameRollsModal'].some((id) => !$(id).hidden);
     if (!open) document.body.style.overflow = '';
   }
 
@@ -1686,6 +1702,10 @@
     $('closeEditRoll').addEventListener('click', closeEditRollModal);
     $('editRollBackdrop').addEventListener('click', closeEditRollModal);
 
+    $('expandGameRolls').addEventListener('click', openGameRollsModal);
+    $('closeGameRolls').addEventListener('click', closeGameRollsModal);
+    $('gameRollsBackdrop').addEventListener('click', closeGameRollsModal);
+
     $('openPastGames').addEventListener('click', openPastGamesModal);
     $('closePastGames').addEventListener('click', closePastGamesModal);
     $('pastGamesBackdrop').addEventListener('click', closePastGamesModal);
@@ -1693,6 +1713,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       if (!$('editRollModal').hidden) closeEditRollModal();
+      else if (!$('gameRollsModal').hidden) closeGameRollsModal();
       else if (!$('gameModal').hidden) closeGameModal();
       else if (!$('playersModal').hidden) closePlayersModal();
       else if (!$('pastGamesModal').hidden) closePastGamesModal();

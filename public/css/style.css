@@ -1689,3 +1689,188 @@ select.chart-scope-select {
     max-height: 180px;
   }
 }
+
+/* --- Big-screen (TV) dashboard compression ---
+   Only applies to the wide three-column layout so the Record Roll grid, Roll Scoreboard
+   and Roll Distribution chart (with its x-axis numbers) fit in one 1920x980 screen without
+   scrolling. Narrower layouts are unchanged. */
+@media (min-width: 1101px) {
+  .layout {
+    gap: 0.8rem;
+    padding: 0.8rem 1.25rem 1.25rem;
+  }
+
+  .panel {
+    padding: 0.85rem 1.1rem;
+  }
+
+  .panel h2 {
+    margin-bottom: 0.55rem;
+  }
+
+  /* Turn timer */
+  .timer-display {
+    font-size: 4.6rem;
+    margin: 0.2rem 0 0.6rem;
+  }
+
+  .timer-settings {
+    margin-bottom: 0.6rem;
+  }
+
+  .timer-settings label {
+    margin-bottom: 0;
+  }
+
+  .timer-controls .btn-icon {
+    width: 4.2rem;
+    height: 4.2rem;
+  }
+
+  .timer-status {
+    margin-top: 0.5rem;
+  }
+
+  .current-turn {
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.8rem;
+  }
+
+  /* Record roll */
+  .roll-form > label {
+    margin-bottom: 0.45rem;
+  }
+
+  .quick-rolls {
+    gap: 0.4rem;
+    margin: 0.15rem 0 0.55rem;
+  }
+
+  .quick-roll-btn {
+    gap: 0.3rem;
+    padding: 0.35rem 0.3rem 0.4rem;
+  }
+
+  .dice-total {
+    height: 2.05rem;
+    font-size: 1.4rem;
+  }
+
+  .die {
+    width: 1.65rem;
+  }
+
+  .roll-flags label.checkbox-label {
+    margin-bottom: 0.4rem;
+  }
+
+  .build-counters {
+    margin-bottom: 0.45rem;
+  }
+
+  .build-counters-title {
+    width: auto;
+  }
+
+  .roll-total-label {
+    margin-bottom: 0;
+  }
+
+  /* Roll scoreboard */
+  .scoreboard {
+    gap: 0.22rem;
+  }
+
+  .scoreboard-cell {
+    padding: 0.3rem 0.55rem;
+  }
+
+  /* Roll distribution: heading and filters share one line */
+  .chart-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 1.25rem;
+  }
+
+  .chart-panel > h2 {
+    margin-bottom: 0;
+  }
+
+  .chart-panel > .chart-filters {
+    margin-bottom: 0;
+  }
+
+  .chart-panel > .chart-scope-note,
+  .chart-panel > .chart-wrap {
+    grid-column: 1 / -1;
+  }
+
+  .chart-panel > .chart-scope-note {
+    margin: 0.3rem 0 0.2rem;
+  }
+
+  .chart-wrap {
+    height: 235px;
+  }
+
+  /* Long roll list scrolls inside the panel; the expand button shows it all in a modal. */
+  .game-rolls-panel .panel-heading {
+    margin-bottom: 0.6rem;
+  }
+
+  .game-rolls-capped {
+    max-height: 26rem;
+    overflow-y: auto;
+  }
+
+  .game-rolls-capped .game-rolls-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+}
+
+.panel-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.panel-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.panel-expand-btn svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.panel-expand-btn:hover,
+.panel-expand-btn:focus-visible {
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+#gameRollsTitle .roll-count {
+  margin-left: 0.5rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* The roll list is only capped on the wide layout, so the expand button is only needed there. */
+@media (max-width: 1100px) {
+  .panel-expand-btn {
+    display: none;
+  }
+}
