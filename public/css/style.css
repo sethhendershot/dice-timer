@@ -739,6 +739,50 @@ label.checkbox-label:has(input:disabled) {
   margin-top: 1.25rem;
 }
 
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.step-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: rgba(61, 139, 253, 0.15);
+}
+
+.step-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.step-value {
+  min-width: 1.4rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings-table td:has(.stepper) {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
 .standings-table .pb-points.reached {
   color: var(--success);
 }

@@ -77,31 +77,13 @@ function cleanPlayerOrder(value) {
   return order;
 }
 
-// Roads are no longer collected per roll: a roadsBuilt value sent by a client is ignored,
-// and roadsBuilt already stored on older rolls is left as it is.
-const BUILD_FIELDS = ['settlementsBuilt', 'citiesBuilt'];
-const BUILD_LABELS = { settlementsBuilt: 'Settlements built', citiesBuilt: 'Cities built' };
-// Sanity bound on one turn's input only; house rules allow extra pieces, so there are no piece-count limits.
-const MAX_BUILDS_PER_TURN = 99;
-
-// Reads settlementsBuilt/citiesBuilt from a request body.
-// Missing fields default to 0 when fillMissing is true, otherwise they are skipped.
-function parseBuildCounts(body, fillMissing) {
-  const counts = {};
-  for (const field of BUILD_FIELDS) {
-    const raw = body[field];
-    if (raw === undefined || raw === null || raw === '') {
-      if (fillMissing) counts[field] = 0;
-      continue;
-    }
-    const count = Number(raw);
-    if (!Number.isInteger(count) || count < 0 || count > MAX_BUILDS_PER_TURN) {
-      return { error: `${BUILD_LABELS[field]} must be a whole number from 0 to ${MAX_BUILDS_PER_TURN}` };
-    }
-    counts[field] = count;
-  }
-  return { counts };
-}
+// Settlements, cities and VP cards are tracked per game on the Player Standings table
+// (game.builds[playerId] = { settlements, cities, victoryPoints }), not on rolls. Build fields
+// sent with a roll (roadsBuilt, settlementsBuilt, citiesBuilt) are ignored; values already stored
+// on older rolls are left untouched and still count toward that game's totals.
+const GAME_COUNT_FIELDS = ['settlements', 'cities', 'victoryPoints'];
+const GAME_COUNT_LABELS = { settlements: 'Settlements', cities: 'Cities', victoryPoints: 'Victory points' };
+const MAX_GAME_COUNT = 999;
 
 function parseAwardHolder(value) {
   if (value === null || value === '') return { id: null };
@@ -195,10 +177,6 @@ app.post('/api/rolls', (req, res) => {
   if (called.error) {
     return res.status(400).json({ error: called.error });
   }
-  const builds = parseBuildCounts(req.body, true);
-  if (builds.error) {
-    return res.status(400).json({ error: builds.error });
-  }
   const data = readJson(FILES.rolls);
   const roll = {
     id: newId(),
@@ -210,7 +188,6 @@ app.post('/api/rolls', (req, res) => {
     calledIt: called.calledIt,
     calledById: called.calledById,
     calledByName: called.calledByName,
-    ...builds.counts,
     timestamp: new Date().toISOString(),
   };
   data.rolls.push(roll);
@@ -246,12 +223,6 @@ app.patch('/api/rolls/:id', (req, res) => {
     }
     updates.knightPlayed = body.knightPlayed;
   }
-
-  const builds = parseBuildCounts(body, false);
-  if (builds.error) {
-    return res.status(400).json({ error: builds.error });
-  }
-  Object.assign(updates, builds.counts);
 
   const data = readJson(FILES.rolls);
   const roll = data.rolls.find((entry) => entry.id === req.params.id);
@@ -391,6 +362,49 @@ app.patch('/api/games/:id/bias', (req, res) => {
     return res.status(404).json({ error: 'Game not found' });
   }
   game.bias = bias;
+  writeJson(FILES.games, data);
+  res.json(game);
+});
+
+app.patch('/api/games/:id/builds', (req, res) => {
+  const body = req.body || {};
+  const playerId = typeof body.playerId === 'string' ? body.playerId.trim() : '';
+  if (!playerId) {
+    return res.status(400).json({ error: 'Player is required' });
+  }
+  const counts = {};
+  for (const field of GAME_COUNT_FIELDS) {
+    if (body[field] === undefined) continue;
+    const count = body[field];
+    if (!Number.isInteger(count) || count < 0 || count > MAX_GAME_COUNT) {
+      return res.status(400).json({ error: `${GAME_COUNT_LABELS[field]} must be a whole number from 0 to ${MAX_GAME_COUNT}` });
+    }
+    counts[field] = count;
+  }
+  if (Object.keys(counts).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+  const data = readJson(FILES.games);
+  const game = data.games.find((entry) => entry.id === req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  const inGame = Array.isArray(game.playerOrder) && game.playerOrder.includes(playerId);
+  const known = readJson(FILES.players).players.some((player) => player.id === playerId);
+  const rolledInGame = readJson(FILES.rolls).rolls.some((roll) => roll.gameId === game.id && roll.playerId === playerId);
+  if (!inGame && !known && !rolledInGame) {
+    return res.status(400).json({ error: 'Player is not part of this game' });
+  }
+  if (!game.builds || typeof game.builds !== 'object' || Array.isArray(game.builds)) {
+    game.builds = {};
+  }
+  const current = game.builds[playerId] || {};
+  game.builds[playerId] = {
+    settlements: Number.isInteger(current.settlements) ? current.settlements : 0,
+    cities: Number.isInteger(current.cities) ? current.cities : 0,
+    victoryPoints: Number.isInteger(current.victoryPoints) ? current.victoryPoints : 0,
+    ...counts,
+  };
   writeJson(FILES.games, data);
   res.json(game);
 });
