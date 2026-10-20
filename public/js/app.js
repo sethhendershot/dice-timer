@@ -123,13 +123,70 @@
   const TIMER_SOUND_DEFAULT = '/sounds/timer-done.wav';
   let timerSound = null;
   let timerSoundUnlocked = false;
+  let timerSoundUrl = TIMER_SOUND_DEFAULT;
 
   function getTimerSound() {
     if (!timerSound) {
-      timerSound = new Audio(TIMER_SOUND_DEFAULT);
+      timerSound = new Audio(timerSoundUrl);
       timerSound.preload = 'auto';
+      timerSound.addEventListener('error', () => {
+        if (timerSoundUrl !== TIMER_SOUND_DEFAULT) {
+          timerSoundUrl = TIMER_SOUND_DEFAULT;
+          timerSound.src = TIMER_SOUND_DEFAULT;
+        }
+      });
     }
     return timerSound;
+  }
+
+  function applyTimerSound(info) {
+    const url = info && info.custom && info.url ? info.url : TIMER_SOUND_DEFAULT;
+    timerSoundUrl = url;
+    const audio = getTimerSound();
+    if (!audio.src.endsWith(url)) audio.src = url;
+    $('timerSoundPick').title = info && info.custom ? `Timer sound: ${info.name}` : 'Timer sound: default chime';
+    $('timerSoundPick').classList.toggle('active', Boolean(info && info.custom));
+    $('timerSoundReset').hidden = !(info && info.custom);
+  }
+
+  async function loadTimerSound() {
+    try {
+      applyTimerSound(await api('/api/sound'));
+    } catch (err) {
+      applyTimerSound(null);
+    }
+  }
+
+  async function uploadTimerSound(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Sound file is too large (max 5 MB)', 'error');
+      return;
+    }
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const type = file.type || { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg' }[ext] || '';
+    try {
+      const res = await fetch('/api/sound', {
+        method: 'POST',
+        headers: { 'Content-Type': type, 'X-Filename': encodeURIComponent(file.name) },
+        body: file,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      applyTimerSound(data);
+      showToast(`Timer sound set to ${data.name}`);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function resetTimerSound() {
+    try {
+      applyTimerSound(await api('/api/sound', { method: 'DELETE' }));
+      showToast('Timer sound reset to default chime');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
   function unlockTimerSound() {
@@ -1622,6 +1679,13 @@
     ['pointerdown', 'keydown', 'touchstart'].forEach((type) => {
       document.addEventListener(type, unlockTimerSound, { capture: true, passive: true });
     });
+    $('timerSoundPick').addEventListener('click', () => $('timerSoundFile').click());
+    $('timerSoundFile').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      uploadTimerSound(file);
+    });
+    $('timerSoundReset').addEventListener('click', resetTimerSound);
     $('timerPlay').addEventListener('click', playTimer);
     $('timerPause').addEventListener('click', pauseTimer);
     $('timerReset').addEventListener('click', resetTimer);
@@ -1787,6 +1851,7 @@
     buildQuickRolls();
     bindEvents();
     resetTimer();
+    loadTimerSound();
 
     try {
       await Promise.all([loadPlayers(), loadRolls(), loadWinners(), loadGames()]);

@@ -1,3 +1,4 @@
 node_modules/
 terminals/
-.playwright-mcp/
+.playwright-mcp/public/sounds/custom-*
+sound-settings.json

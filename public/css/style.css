@@ -521,6 +521,40 @@ body {
   margin-left: 0.2rem;
 }
 
+.timer-sound {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+  z-index: 1;
+}
+
+.timer-sound-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.timer-sound-btn:hover,
+.timer-sound-btn:focus-visible {
+  opacity: 1;
+  border-color: var(--muted);
+}
+
+.timer-sound-btn.active {
+  color: var(--success);
+  opacity: 0.9;
+}
+
 .timer-status {
   text-align: center;
   margin-top: 0.75rem;
