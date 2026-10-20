@@ -118,6 +118,46 @@
     overlay.setAttribute('aria-hidden', expired ? 'false' : 'true');
   }
 
+  // --- Timer-done sound ---
+
+  const TIMER_SOUND_DEFAULT = '/sounds/timer-done.wav';
+  let timerSound = null;
+  let timerSoundUnlocked = false;
+
+  function getTimerSound() {
+    if (!timerSound) {
+      timerSound = new Audio(TIMER_SOUND_DEFAULT);
+      timerSound.preload = 'auto';
+    }
+    return timerSound;
+  }
+
+  function unlockTimerSound() {
+    if (timerSoundUnlocked) return;
+    timerSoundUnlocked = true;
+    const audio = getTimerSound();
+    audio.muted = true;
+    const p = audio.play();
+    const done = () => { audio.pause(); audio.currentTime = 0; audio.muted = false; };
+    if (p && typeof p.then === 'function') {
+      p.then(done).catch(() => { audio.muted = false; timerSoundUnlocked = false; });
+    } else {
+      done();
+    }
+  }
+
+  function playTimerSound() {
+    try {
+      const audio = getTimerSound();
+      audio.muted = false;
+      audio.currentTime = 0;
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (err) {
+      // Audio unavailable; the visual alert still shows.
+    }
+  }
+
   function stopTimerInterval() {
     if (timerInterval) {
       clearInterval(timerInterval);
@@ -141,6 +181,7 @@
         timerRemainingMs = 0;
         stopTimerInterval();
         setTimerExpired(true);
+        playTimerSound();
         setTimerStatus("Time's up!");
         updateTimerDisplay();
       } else {
@@ -1578,6 +1619,9 @@
   // --- Event wiring ---
 
   function bindEvents() {
+    ['pointerdown', 'keydown', 'touchstart'].forEach((type) => {
+      document.addEventListener(type, unlockTimerSound, { capture: true, passive: true });
+    });
     $('timerPlay').addEventListener('click', playTimer);
     $('timerPause').addEventListener('click', pauseTimer);
     $('timerReset').addEventListener('click', resetTimer);
