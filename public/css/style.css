@@ -847,7 +847,63 @@ label.checkbox-label:has(input:disabled) {
 .roll-flags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 1.5rem;
+  gap: 0.5rem 0.6rem;
+}
+
+/* Knight played / Called it as pill toggles, styled like the Bias pill */
+.roll-flags label.checkbox-label {
+  position: relative;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  user-select: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.roll-flags label.checkbox-label input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+}
+
+.roll-flags label.checkbox-label::after {
+  content: 'No';
+  min-width: 2.2rem;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: right;
+  color: var(--text);
+}
+
+.roll-flags label.checkbox-label:hover {
+  border-color: var(--accent);
+}
+
+.roll-flags label.checkbox-label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.roll-flags label.checkbox-label:has(input:checked) {
+  border-color: rgba(76, 175, 130, 0.55);
+  background: rgba(76, 175, 130, 0.12);
+}
+
+.roll-flags label.checkbox-label:has(input:checked)::after {
+  content: 'Yes';
+  color: var(--success);
 }
 
 .called-by-field[hidden] {
