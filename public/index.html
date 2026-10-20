@@ -127,7 +127,16 @@
           <option value="game">Current game</option>
           <option value="all">All time</option>
         </select>
+        <div class="chart-legend" id="chartLegend" hidden aria-hidden="true">
+          <span class="chart-legend-item"><span class="chart-legend-swatch swatch-game"></span><span id="chartLegendGame">Current game</span></span>
+          <span class="chart-legend-item"><span class="chart-legend-swatch swatch-all"></span>All time</span>
+          <span class="chart-legend-item"><span class="chart-legend-swatch swatch-expected"></span>Expected</span>
+        </div>
         <div class="chart-filter-group">
+          <label class="chart-compare-toggle" id="chartCompareLabel" hidden>
+            <input type="checkbox" id="chartCompare">
+            Compare to all time
+          </label>
           <label>
             <input type="radio" name="chartType" value="bar" checked>
             Bar

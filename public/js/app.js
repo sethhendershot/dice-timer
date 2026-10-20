@@ -1175,6 +1175,141 @@
     note.textContent = `${count} ${noun} in the current game`;
   }
 
+  // --- Compare to all time (line mode only) ---
+
+  const CHART_COMPARE_KEY = 'diceTimer.chartCompare';
+  const EXPECTED_PCT = CATAN_VALUES.map((v) => ((6 - Math.abs(7 - v)) / 36) * 100);
+
+  function readChartComparePref() {
+    try {
+      return localStorage.getItem(CHART_COMPARE_KEY) === '1';
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function saveChartComparePref(on) {
+    try {
+      localStorage.setItem(CHART_COMPARE_KEY, on ? '1' : '0');
+    } catch (err) {
+      // Storage unavailable; the checkbox still works for this visit.
+    }
+  }
+
+  function syncChartCompareControls(type) {
+    const label = $('chartCompareLabel');
+    const box = $('chartCompare');
+    const isLine = type === 'line';
+    const isAll = getChartScope() === 'all';
+    label.hidden = !isLine;
+    box.disabled = isAll;
+    label.classList.toggle('disabled', isAll);
+    label.title = isAll ? 'Pick a game to compare against all time' : '';
+    const comparing = isLine && !isAll && box.checked;
+    $('chartLegend').hidden = !comparing;
+    return comparing;
+  }
+
+  function compareSeriesLabel() {
+    const scope = getChartScope();
+    if (scope === 'past') {
+      const game = games.find((entry) => entry.id === chartScopeValue());
+      return game ? formatRollDate(game.startedAt) : 'Selected game';
+    }
+    return 'Current game';
+  }
+
+  function toPercents(counts, total) {
+    return CATAN_VALUES.map((v) => (total ? (counts[v] / total) * 100 : 0));
+  }
+
+  function gameGradient(context) {
+    const { chart } = context;
+    const area = chart.chartArea;
+    if (!area) return 'rgba(245, 166, 35, 0.12)';
+    const gradient = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    gradient.addColorStop(0, 'rgba(245, 166, 35, 0.32)');
+    gradient.addColorStop(1, 'rgba(245, 166, 35, 0)');
+    return gradient;
+  }
+
+  function buildCompareDatasets(scoped) {
+    const gameCounts = buildRollCounts(scoped);
+    const allCounts = buildRollCounts(rolls);
+    return [
+      {
+        label: compareSeriesLabel(),
+        data: toPercents(gameCounts, scoped.length),
+        counts: CATAN_VALUES.map((v) => gameCounts[v]),
+        borderColor: '#f5a623',
+        backgroundColor: gameGradient,
+        fill: 'origin',
+        borderWidth: 3.5,
+        tension: 0.4,
+        pointRadius: 5.5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: '#ffc65c',
+        pointBorderColor: 'rgba(245, 166, 35, 0.35)',
+        pointBorderWidth: 5,
+        pointHoverBorderWidth: 7,
+        order: 1,
+      },
+      {
+        label: 'All time',
+        data: toPercents(allCounts, rolls.length),
+        counts: CATAN_VALUES.map((v) => allCounts[v]),
+        borderColor: 'rgba(77, 163, 255, 0.95)',
+        backgroundColor: 'rgba(77, 163, 255, 0.05)',
+        fill: 'origin',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#4da3ff',
+        pointBorderColor: '#162030',
+        pointBorderWidth: 1.5,
+        order: 2,
+      },
+      {
+        label: 'Expected',
+        data: EXPECTED_PCT,
+        borderColor: 'rgba(160, 174, 196, 0.6)',
+        borderDash: [4, 5],
+        borderWidth: 1.5,
+        fill: false,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        pointBackgroundColor: 'rgba(160, 174, 196, 0.8)',
+        order: 3,
+      },
+    ];
+  }
+
+  function compareChartOptions() {
+    const options = chartOptions();
+    options.animation = { duration: 650, easing: 'easeOutCubic' };
+    options.interaction = { mode: 'index', intersect: false };
+    options.plugins.tooltip = {
+      callbacks: {
+        title: (items) => `Rolled ${items[0].label}`,
+        label: (item) => {
+          const pct = `${item.raw.toFixed(1)}%`;
+          const counts = item.dataset.counts;
+          if (!counts) return ` ${item.dataset.label}: ${pct}`;
+          const n = counts[item.dataIndex];
+          return ` ${item.dataset.label}: ${pct} (${n} roll${n === 1 ? '' : 's'})`;
+        },
+      },
+    };
+    options.scales.y.ticks = {
+      color: '#8b9cb3',
+      callback: (value) => `${value}%`,
+    };
+    options.scales.y.suggestedMax = 20;
+    return options;
+  }
+
   function updateChart() {
     const scoped = getScopedRolls();
     renderChartScopeNote(scoped);
@@ -1182,8 +1317,21 @@
     const labels = CATAN_VALUES.map(String);
     const data = CATAN_VALUES.map((v) => counts[v]);
     const type = getChartType();
+    const comparing = syncChartCompareControls(type);
 
-    if (rollChart && rollChart.config.type !== type) {
+    if (comparing) {
+      $('chartLegendGame').textContent = compareSeriesLabel();
+      if (rollChart) rollChart.destroy();
+      rollChart = new Chart($('rollChart').getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: buildCompareDatasets(scoped) },
+        options: compareChartOptions(),
+      });
+      rollChart.$compare = true;
+      return;
+    }
+
+    if (rollChart && (rollChart.config.type !== type || rollChart.$compare)) {
       rollChart.destroy();
       rollChart = null;
     }
@@ -1727,6 +1875,12 @@
     });
 
     $('chartScope').addEventListener('change', () => {
+      updateChart();
+    });
+
+    $('chartCompare').checked = readChartComparePref();
+    $('chartCompare').addEventListener('change', (e) => {
+      saveChartComparePref(e.target.checked);
       updateChart();
     });
 
