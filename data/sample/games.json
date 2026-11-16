@@ -1,0 +1,85 @@
+{
+  "currentGameId": null,
+  "games": [
+    {
+      "id": "1ff9ec60-148d-4bd4-a09e-e2dc5c9331b4",
+      "startedAt": "2026-03-14T19:05:12.000Z",
+      "endedAt": "2026-03-14T22:08:12.000Z",
+      "pointGoal": 10,
+      "playerOrder": [
+        "a31c06bd-463e-4923-bc1a-adbde48b1697",
+        "6c080717-373b-419a-868f-32b7a6b38b6b",
+        "38729647-cfde-41c2-8e28-b26c57472737",
+        "f5c3561a-1761-485b-9858-9a43ce0bba75"
+      ],
+      "longestRoadPlayerId": "6c080717-373b-419a-868f-32b7a6b38b6b",
+      "largestArmyPlayerId": "38729647-cfde-41c2-8e28-b26c57472737"
+    },
+    {
+      "id": "a8154883-a9a2-4e55-97d1-f3c03cac4f39",
+      "startedAt": "2026-04-02T18:22:40.000Z",
+      "endedAt": "2026-04-02T20:43:40.000Z",
+      "pointGoal": 12,
+      "playerOrder": [
+        "a31c06bd-463e-4923-bc1a-adbde48b1697",
+        "6c080717-373b-419a-868f-32b7a6b38b6b",
+        "f5c3561a-1761-485b-9858-9a43ce0bba75"
+      ],
+      "builds": {
+        "a31c06bd-463e-4923-bc1a-adbde48b1697": {
+          "settlements": 3,
+          "cities": 2,
+          "victoryPoints": 1
+        },
+        "6c080717-373b-419a-868f-32b7a6b38b6b": {
+          "settlements": 2,
+          "cities": 1,
+          "victoryPoints": 0
+        },
+        "f5c3561a-1761-485b-9858-9a43ce0bba75": {
+          "settlements": 4,
+          "cities": 1,
+          "victoryPoints": 0
+        }
+      },
+      "longestRoadPlayerId": "a31c06bd-463e-4923-bc1a-adbde48b1697",
+      "largestArmyPlayerId": "f5c3561a-1761-485b-9858-9a43ce0bba75",
+      "bias": true
+    },
+    {
+      "id": "3643a914-283d-4c8d-9328-006873b09878",
+      "startedAt": "2026-04-18T17:40:08.000Z",
+      "endedAt": "2026-04-18T19:08:22.410Z",
+      "pointGoal": 10,
+      "playerOrder": [
+        "a31c06bd-463e-4923-bc1a-adbde48b1697",
+        "6c080717-373b-419a-868f-32b7a6b38b6b",
+        "38729647-cfde-41c2-8e28-b26c57472737",
+        "f5c3561a-1761-485b-9858-9a43ce0bba75"
+      ],
+      "builds": {
+        "a31c06bd-463e-4923-bc1a-adbde48b1697": {
+          "settlements": 1,
+          "cities": 0,
+          "victoryPoints": 0
+        },
+        "6c080717-373b-419a-868f-32b7a6b38b6b": {
+          "settlements": 2,
+          "cities": 0,
+          "victoryPoints": 0
+        },
+        "38729647-cfde-41c2-8e28-b26c57472737": {
+          "settlements": 1,
+          "cities": 1,
+          "victoryPoints": 0
+        },
+        "f5c3561a-1761-485b-9858-9a43ce0bba75": {
+          "settlements": 0,
+          "cities": 0,
+          "victoryPoints": 1
+        }
+      },
+      "longestRoadPlayerId": "38729647-cfde-41c2-8e28-b26c57472737"
+    }
+  ]
+}

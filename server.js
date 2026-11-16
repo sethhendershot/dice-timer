@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
+const SAMPLE_DIR = path.join(DATA_DIR, 'sample');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -21,6 +22,20 @@ function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+  seedDataFromSample();
+}
+
+// Copy bundled sample files into data/ only when the live file is missing.
+// Never overwrites existing game data.
+function seedDataFromSample() {
+  if (!fs.existsSync(SAMPLE_DIR)) return;
+  Object.values(FILES).forEach((filename) => {
+    const dest = path.join(DATA_DIR, filename);
+    if (fs.existsSync(dest)) return;
+    const src = path.join(SAMPLE_DIR, filename);
+    if (!fs.existsSync(src)) return;
+    fs.copyFileSync(src, dest);
+  });
 }
 
 function defaultData(filename) {

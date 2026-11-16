@@ -1,0 +1,24 @@
+{
+  "players": [
+    {
+      "id": "a31c06bd-463e-4923-bc1a-adbde48b1697",
+      "name": "Player One",
+      "createdAt": "2026-03-01T18:12:04.110Z"
+    },
+    {
+      "id": "6c080717-373b-419a-868f-32b7a6b38b6b",
+      "name": "Player Two",
+      "createdAt": "2026-03-01T18:12:11.442Z"
+    },
+    {
+      "id": "38729647-cfde-41c2-8e28-b26c57472737",
+      "name": "Player Three",
+      "createdAt": "2026-03-01T18:12:18.907Z"
+    },
+    {
+      "id": "f5c3561a-1761-485b-9858-9a43ce0bba75",
+      "name": "Player Four",
+      "createdAt": "2026-03-08T16:44:03.221Z"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "winners": [
+    {
+      "id": "6ffa19c2-a2b4-4f19-b12a-b14ce7070b53",
+      "playerId": "6c080717-373b-419a-868f-32b7a6b38b6b",
+      "playerName": "Player Two",
+      "gameId": "1ff9ec60-148d-4bd4-a09e-e2dc5c9331b4",
+      "winnerHadKnight": true,
+      "timestamp": "2026-03-14T22:08:12.000Z"
+    },
+    {
+      "id": "cb0e4b5b-5f6e-453e-8769-90aeca2e2b2c",
+      "playerId": "a31c06bd-463e-4923-bc1a-adbde48b1697",
+      "playerName": "Player One",
+      "gameId": "a8154883-a9a2-4e55-97d1-f3c03cac4f39",
+      "winnerHadKnight": false,
+      "timestamp": "2026-04-02T20:43:40.000Z"
+    },
+    {
+      "id": "67613399-2d3a-4f22-8216-40ba6287afb3",
+      "playerId": "38729647-cfde-41c2-8e28-b26c57472737",
+      "playerName": "Player Three",
+      "gameId": "3643a914-283d-4c8d-9328-006873b09878",
+      "winnerHadKnight": false,
+      "timestamp": "2026-04-18T19:08:22.410Z"
+    }
+  ]
+}
